@@ -8,13 +8,13 @@ use Illuminate\Http\Request;
 class DuplicateCheckerController extends Controller
 {
     public function index(){
-        $path = storage_path('app/duplicates.json');
+        $path = storage_path('app\duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
         return response()->json($duplicates);
     }
 
     public function show($id) {
-        $path = storage_path('app/duplicates.json');
+        $path = storage_path('app\duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
 
         foreach ($duplicates as $duplicate) {
@@ -34,6 +34,8 @@ class DuplicateCheckerController extends Controller
             'email' => 'sometimes|required|email',
             'phone' => 'sometimes|required|string',
             'address' => 'sometimes|required|string',
+            'postalcode' => 'required|string',
+            'city' => 'required|string',
             'barcode' => 'sometimes|required|string',
             'createdAt' => 'sometimes|required|date',
             'modifiedAt' => 'sometimes|required|date'
@@ -70,31 +72,37 @@ class DuplicateCheckerController extends Controller
 
     public function store(Request $request) {
         $data = $request->validate([
-            'id' => 'required|integer',
             'firstname' => 'required|string',
             'lastname' => 'required|string',
             'dateofbirth' => 'required|date',
             'email' => 'required|email',
             'phone' => 'required|string',
             'address' => 'required|string',
+            'postalcode' => 'required|string',
+            'city' => 'required|string',
             'barcode' => 'required|string',
             'createdAt' => 'required|date',
             'modifiedAt' => 'required|date'
-        ]);
+        ]);    
 
-        $path = storage_path('app/duplicates.json');
+        // Check if the record already exists
+        $path = storage_path('app\duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
+          
 
         foreach ($duplicates as $duplicate) {
             // Fuzzy logic check
             if ($this->isDuplicate($duplicate, $data)) {
-                return response()->json(['message' => 'Duplicate record found with fuzzy logic.'], 409);
+                return response()->json([
+                    'message' => 'Duplicate record found with fuzzy logic.',
+                    'duplicate' => $duplicate], 409);
             }
         }
 
+        // Add the record to the duplicates file
         $duplicates[] = $data;
         file_put_contents($path, json_encode($duplicates));
-
+ 
         return response()->json(['message' => 'Record added successfully.'], 201);
     }
 
@@ -108,16 +116,20 @@ class DuplicateCheckerController extends Controller
             $this->similarity($record1['lastname'], $record2['lastname']),
             $this->similarity($record1['email'], $record2['email']),
             $this->similarity($record1['phone'], $record2['phone']),
-            $this->similarity($record1['address'], $record2['address'])
+            $this->similarity($record1['address'], $record2['address']),
+            $this->similarity($record1['postalcode'], $record2['postalcode']),
+            $this->similarity($record1['city'], $record2['city']),
         ];
 
         // Check if the average similarity exceeds the threshold
         $averageSimilarity = array_sum($similarities) / count($similarities);
+    
         return $averageSimilarity > $threshold;
     }
 
     private function similarity($str1, $str2) {
         // Use Levenshtein distance or any other string similarity metric
+        // The Levenshtein distance is a string metric for measuring the difference between two sequences
         $levenshtein = levenshtein($str1, $str2);
         $maxLen = max(strlen($str1), strlen($str2));
 
