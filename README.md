@@ -1,12 +1,31 @@
 # CRE
 
 **CRE** is a web service designed for checking duplicate entries on ILS (Integrated Library Systems) before allowing a post request. It utilizes fuzzy logic, specifically the Levenshtein distance fuzzy matching algorithm.
+The computational complexity of the Levenshtein distance algorithm is often expressed using Big-O notation. Specifically, it has a time complexity of O(n*m), where:
+```
+n is the length of one string.
+m is the length of the other string
+```
 
 ## Development Environment
 
 - **Laravel Herd**
 - **PHP 8.3***
 - **MySQL**
+
+### NOTE
+<!--  copy .env.example into .env -->
+- **Copy .env.example into .env**
+    - Look for the following lines 
+    ```
+    DB_CONNECTION=mysql
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=cre // Make sure the database name matches what is running on your MySQL server.
+    DB_USERNAME=root // choose a username
+    DB_PASSWORD= // choose a password
+    ```
+    - On your MySQL server, make sure you have the same configuration. 
 
 ## Libraries
 
