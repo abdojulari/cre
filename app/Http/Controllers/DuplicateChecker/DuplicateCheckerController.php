@@ -117,6 +117,7 @@ class DuplicateCheckerController extends Controller
             $this->similarity($record1['email'], $record2['email']),
             $this->similarity($record1['phone'], $record2['phone']),
             $this->similarity($record1['address'], $record2['address']),
+            $this->similarity($record1['dateofbirth'], $record2['dateofbirth']),
             $this->similarity($record1['postalcode'], $record2['postalcode']),
             $this->similarity($record1['city'], $record2['city']),
         ];
