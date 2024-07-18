@@ -4,6 +4,9 @@ namespace App\Http\Controllers\DuplicateChecker;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Predis\Client;
+use Illuminate\Support\Facades\Log;
+
 
 class DuplicateCheckerController extends Controller
 {
@@ -70,6 +73,7 @@ class DuplicateCheckerController extends Controller
         return response()->json(['message' => 'Record not found.'], 404);
     }
 
+  
     public function store(Request $request) {
         $data = $request->validate([
             'firstname' => 'required|string',
@@ -84,26 +88,51 @@ class DuplicateCheckerController extends Controller
             'createdAt' => 'required|date',
             'modifiedAt' => 'required|date'
         ]);    
-
+    
         // Check if the record already exists
         $path = storage_path('app\duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
-          
 
-        foreach ($duplicates as $duplicate) {
-            // Fuzzy logic check
-            if ($this->isDuplicate($duplicate, $data)) {
-                return response()->json([
-                    'message' => 'Duplicate record found with fuzzy logic.',
-                    'duplicate' => $duplicate], 409);
-            }
+        // Store duplicates in Redis using Predis
+        $redis = new Client([
+            'scheme' => 'tcp',
+            'host'   => '127.0.0.1',
+            'port'   => 6379,
+            'database'   => '0'
+        ]);
+
+        $redis->set('duplicates_data', json_encode($duplicates));
+        Log::info('Stored duplicates data in Redis.', ['data' => $duplicates]);
+        // Fuzzy logic check
+        $duplicate = $this->retrieveDuplicateUsingCache($data, $redis);
+        if ($duplicate) {
+            return response()->json([
+                'message' => 'Duplicate record found with fuzzy logic.',
+                'duplicate' => $duplicate
+            ], 409);
         }
-
+    
         // Add the record to the duplicates file
         $duplicates[] = $data;
         file_put_contents($path, json_encode($duplicates));
- 
+    
+        // Update Redis cache after adding new record
+        $redis->set('duplicates_data', json_encode($duplicates));
+    
         return response()->json(['message' => 'Record added successfully.'], 201);
+    }
+    
+    private function retrieveDuplicateUsingCache($data, $redis) {
+        // Retrieve duplicates from Redis using Predis
+        $duplicates = json_decode($redis->get('duplicates_data'), true) ?? [];
+
+        foreach ($duplicates as $duplicate) {
+            if ($this->isDuplicate($duplicate, $data)) {
+                return $duplicate; // Return the duplicate record details
+            }
+        }
+
+        return null;
     }
 
     private function isDuplicate($record1, $record2) {

@@ -12,8 +12,17 @@ m is the length of the other string
 - **Laravel Herd**
 - **PHP 8.3***
 - **MySQL**
+- **Redis**
 
 ### NOTE
+- If you are running windows, install redis using scoop `scoop install main/redis` and in your laravel project run `composer require predis/predis:^2.0`.
+- To initiate the Redis
+    - using powershell, you can run 
+        - `redis-server` to start the server
+        - `redis-cli` to use the CLI Commands
+        - `redis-benchmark` for evaluating the performance of a Redis instance. 
+
+
 <!--  copy .env.example into .env -->
 - **Copy .env.example into .env**
     - Look for the following lines 
