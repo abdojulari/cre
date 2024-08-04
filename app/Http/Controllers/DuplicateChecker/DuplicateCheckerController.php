@@ -11,13 +11,13 @@ use Illuminate\Support\Facades\Log;
 class DuplicateCheckerController extends Controller
 {
     public function index(){
-        $path = storage_path('app\duplicates.json');
+        $path = storage_path('app/duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
         return response()->json($duplicates);
     }
 
     public function show($id) {
-        $path = storage_path('app\duplicates.json');
+        $path = storage_path('app/duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
 
         foreach ($duplicates as $duplicate) {

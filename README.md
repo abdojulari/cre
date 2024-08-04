@@ -67,8 +67,14 @@ m is the length of the other string
    - Follow these steps:
      1. **Generate Authorization Token**:
         - Run `php artisan passport:client --client` to obtain the `client_id` and `client_secret`.
-        - With a 'POST' method, generate a token using the `client_id`, `client_secret`, and set `grant_type` to `client_credentials`. Endpoint: `https://cre.test/oauth/token`
+        - With a 'POST' method, generate a token using the `client_id`, `client_secret`, and set `grant_type` to `client_credentials` with `x-www-form-urlencoded`. Endpoint: `https://cre.test/oauth/token`
      2. **Display Data**:
         - Set Authorization/Auth Type to `Bearer Token` and access the endpoint `https://cre.test/api/duplicates` using the 'GET' method.
      3. **Create Data**:
         - Set Authorization/Auth Type to `Bearer Token` and access the endpoint `https://cre.test/api/duplicates` using the 'POST' method.
+
+## Commands
+**Run Commands for processing ILS Data**
+```
+php artisan data:process
+```
