@@ -19,7 +19,7 @@ class ProcessILSDataCommand extends Command
     {
         try {
             // Run the command
-            $command = 'sel command to retrieve data from ILS';
+            $command = "ssh edpltest.sirsidynix.net -l sirsi 2>/dev/null \'/software/EDPL/cronscripts/ILS_Registration_Engine/get_new_and_changed_ils_users_test.sh\'";
             $process = Process::run($command);
             if (!$process->successful()) {
                 throw new \Exception('Command failed: ' . $process->errorOutput());

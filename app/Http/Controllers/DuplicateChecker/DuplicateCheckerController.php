@@ -6,13 +6,23 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Predis\Client;
 use Illuminate\Support\Facades\Log;
+use App\Services\PatronDataTransformer;
 
 
 class DuplicateCheckerController extends Controller
 {
+    protected $patronDataTransformer;
+
+
+    public function __construct(PatronDataTransformer $patronDataTransformer)
+    {
+        $this->patronDataTransformer = $patronDataTransformer;
+    }
+
     public function index(){
-        $path = storage_path('app/duplicates.json');
+        $path = storage_path('app/data1.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
+        dd($duplicates);
         return response()->json($duplicates);
     }
 
@@ -41,7 +51,14 @@ class DuplicateCheckerController extends Controller
             'city' => 'required|string',
             'barcode' => 'sometimes|required|string',
             'createdAt' => 'sometimes|required|date',
-            'modifiedAt' => 'sometimes|required|date'
+            'modifiedAt' => 'sometimes|required|date',
+            'careof' => 'nullable|string',
+            'category1' => 'nullable|string',
+            'category2' => 'nullable|string',
+            'category3' => 'nullable|string',
+            'category4' => 'nullable|string',
+            'category5' => 'nullable|string',
+            'category6' => 'nullable|string',
         ]);
 
         $path = storage_path('app/duplicates.json');
@@ -85,12 +102,19 @@ class DuplicateCheckerController extends Controller
             'postalcode' => 'required|string',
             'city' => 'required|string',
             'barcode' => 'required|string',
+            'careof' => 'nullable|string',
+            'category1' => 'nullable|string',
+            'category2' => 'nullable|string',
+            'category3' => 'nullable|string',
+            'category4' => 'nullable|string',
+            'category5' => 'nullable|string',
+            'category6' => 'nullable|string',
             'createdAt' => 'required|date',
             'modifiedAt' => 'required|date'
         ]);    
     
         // Check if the record already exists
-        $path = storage_path('app\duplicates.json');
+        $path = storage_path('app/data1.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
 
         // Store duplicates in Redis using Predis
@@ -119,6 +143,11 @@ class DuplicateCheckerController extends Controller
         // Update Redis cache after adding new record
         $redis->set('duplicates_data', json_encode($duplicates));
     
+        // Transform and send the data to the API
+        $transformedData = $this->transformer->transform($data);
+        Http::post('your-api-endpoint', $transformedData);
+
+        //return response()->json(['success' => true, 'data' => $transformedData]);
         return response()->json(['message' => 'Record added successfully.'], 201);
     }
     
