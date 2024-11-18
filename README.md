@@ -62,6 +62,13 @@ m is the length of the other string
 2. **Clear Cache and Dump Autoloads**
    - In your root directory, execute `.\clean.ps1` to clear the cache and dump autoloads.
 
+   ```
+   php artisan cache:clear
+   php artisan config:clear
+   php artisan route:clear
+   php artisan view:clear
+   ```
+
 3. **Testing API**
    - Use Postman or any other API testing tool.
    - Follow these steps:
@@ -77,4 +84,10 @@ m is the length of the other string
 **Run Commands for processing ILS Data**
 ```
 php artisan data:process
+```
+
+## Local settings
+**CORS**
+```
+php artisan config:publish cors
 ```

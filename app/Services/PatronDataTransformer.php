@@ -2,8 +2,16 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Log;
+
 class PatronDataTransformer
 {
+    /**
+     * Transform the patron data into the required format.
+     *
+     * @param array $data
+     * @return array
+     */
     public function transform(array $data): array
     {
         return [
@@ -13,14 +21,14 @@ class PatronDataTransformer
             'firstName' => $data['firstname'] ?? null,
             'library' => [
                 '@resource' => '/policy/library',
-                '@key' => 'EPLMNA', // Example static key, modify as needed
+                '@key' => $data['library'] ?? 'EPLMNA',
             ],
             'profile' => [
                 '@resource' => '/policy/userProfile',
-                '@key' => 'EPL_JUV', // Example static key, modify as needed
+                '@key' => $data['profile'] ?? null,
             ],
-            'pin' => 'password', // Static or set as needed
-            'privilegeExpiresDate' => '2030-10-03', // Static or set as needed
+            'pin' => $data['password'] ?? null,
+            'privilegeExpiresDate' => '2030-10-03',
             'birthDate' => $data['dateofbirth'] ?? null,
             'category01' => [
                 '@resource' => '/policy/patronCategory01',
@@ -42,61 +50,72 @@ class PatronDataTransformer
                 '@resource' => '/policy/patronCategory06',
                 '@key' => $data['category6'] ?? null,
             ],
-            'address1' => [
-                [
-                    '@resource' => '/user/patron/address1',
-                    '@key' => '1',
-                    'code' => [
-                        '@resource' => '/policy/patronAddress1',
-                        '@key' => 'CITY/STATE'
-                    ],
-                    'data' => $data['city'] ?? null,
+            'address1' => $this->transformAddress($data),
+        ];
+    }
+
+    /**
+     * Transform address data.
+     *
+     * @param array $data
+     * @return array
+     */
+    private function transformAddress(array $data): array
+    {
+        return [
+            [
+                '@resource' => '/user/patron/address1',
+                '@key' => '1',
+                'code' => [
+                    '@resource' => '/policy/patronAddress1',
+                    '@key' => 'CITY/STATE'
                 ],
-                [
-                    '@resource' => '/user/patron/address1',
-                    '@key' => '5',
-                    'code' => [
-                        '@resource' => '/policy/patronAddress1',
-                        '@key' => 'POSTALCODE'
-                    ],
-                    'data' => $data['postalcode'] ?? null,
+                'data' => ($data['city'] ?? '') . ',' . ($data['province'] ?? ''),
+            ],
+            [
+                '@resource' => '/user/patron/address1',
+                '@key' => '5',
+                'code' => [
+                    '@resource' => '/policy/patronAddress1',
+                    '@key' => 'POSTALCODE'
                 ],
-                [
-                    '@resource' => '/user/patron/address1',
-                    '@key' => '2',
-                    'code' => [
-                        '@resource' => '/policy/patronAddress1',
-                        '@key' => 'PHONE'
-                    ],
-                    'data' => $data['phone'] ?? null,
+                'data' => $data['postalcode'] ?? null,
+            ],
+            [
+                '@resource' => '/user/patron/address1',
+                '@key' => '2',
+                'code' => [
+                    '@resource' => '/policy/patronAddress1',
+                    '@key' => 'PHONE'
                 ],
-                [
-                    '@resource' => '/user/patron/address1',
-                    '@key' => '6',
-                    'code' => [
-                        '@resource' => '/policy/patronAddress1',
-                        '@key' => 'EMAIL'
-                    ],
-                    'data' => $data['email'] ?? null,
+                'data' => $data['phone'] ?? null,
+            ],
+            [
+                '@resource' => '/user/patron/address1',
+                '@key' => '6',
+                'code' => [
+                    '@resource' => '/policy/patronAddress1',
+                    '@key' => 'EMAIL'
                 ],
-                [
-                    '@resource' => '/user/patron/address1',
-                    '@key' => '3',
-                    'code' => [
-                        '@resource' => '/policy/patronAddress1',
-                        '@key' => 'CARE/OF'
-                    ],
-                    'data' => $data['careof'] ?? null,
+                'data' => $data['email'] ?? null,
+            ],
+            [
+                '@resource' => '/user/patron/address1',
+                '@key' => '3',
+                'code' => [
+                    '@resource' => '/policy/patronAddress1',
+                    '@key' => 'CARE/OF'
                 ],
-                [
-                    '@resource' => '/user/patron/address1',
-                    '@key' => '4',
-                    'code' => [
-                        '@resource' => '/policy/patronAddress1',
-                        '@key' => 'STREET'
-                    ],
-                    'data' => $data['address'] ?? null,
-                ]
+                'data' => $data['careof'] ?? null,
+            ],
+            [
+                '@resource' => '/user/patron/address1',
+                '@key' => '4',
+                'code' => [
+                    '@resource' => '/policy/patronAddress1',
+                    '@key' => 'STREET'
+                ],
+                'data' => $data['address'] ?? null,
             ]
         ];
     }
