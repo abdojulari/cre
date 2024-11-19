@@ -43,6 +43,7 @@ m is the length of the other string
 ## Steps
 
 1. **Initialize Keys**
+   - Run `php artisan key:generate` to generate APP_KEY
    - Run `php artisan passport:keys` to generate keys and load them from the environment.
    - Additionally, publish the Passport configuration using:
      ```
@@ -68,8 +69,12 @@ m is the length of the other string
    php artisan route:clear
    php artisan view:clear
    ```
+3. **Migration and Seeder** 
+   - Run the following to run migration `php artisan migrate`
+   - Run the following to seed `php artisan db:seed`
+   - To run specific class `php artisan db:seed --class=UserSeeder`
 
-3. **Testing API**
+4. **Testing API**
    - Use Postman or any other API testing tool.
    - Follow these steps:
      1. **Generate Authorization Token**:
