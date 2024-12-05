@@ -18,6 +18,7 @@ class ProcessILSDataCommand extends Command
 
     public function __construct(RedisService $redisService)
     {
+        parent::__construct();  
         $this->redisService = $redisService;
     }
 
