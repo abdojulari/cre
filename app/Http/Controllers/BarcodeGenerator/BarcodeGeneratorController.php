@@ -3,27 +3,24 @@
 namespace App\Http\Controllers\BarcodeGenerator;
 
 use Illuminate\Http\Request;
-use Predis\Client;
 use App\Http\Controllers\Controller;
+use App\Services\RedisService;
 
 class BarcodeGeneratorController extends Controller
 {
+    protected $redisService;
+
+    public function __construct(RedisService $redisService)
+    {
+        $this->redisService = $redisService;
+    }
+
     public function create()
     {
-        // Initialize Redis client
-        $redis = new Client([
-            'scheme' => 'tcp',
-            'host'   => '127.0.0.1',
-            'port'   => 6379,
-            'database' => '0',
-        ]);
-
         // Define the constant prefix for the barcode
-        $constantPrefix = '21221';
-
+        $constantPrefix = config('cre.last_barcode'); // '212219' create an environment variable for this
         // Get the last generated barcode from Redis
-        $lastBarcode = $redis->get('barcode');
-
+        $lastBarcode = $this->redisService->get('barcode');
         if ($lastBarcode) {
             // Extract the numeric part and increment it by 1
             $lastNumericPart = (int)substr($lastBarcode, strlen($constantPrefix));
@@ -34,14 +31,12 @@ class BarcodeGeneratorController extends Controller
         }
 
         // Ensure the new numeric part is 9 digits long
-        $newNumericPartPadded = str_pad($newNumericPart, 9, '0', STR_PAD_LEFT);
+        $newNumericPartPadded = str_pad($newNumericPart, 8, '0', STR_PAD_LEFT);
 
         // Generate the new barcode
         $newBarcode = $constantPrefix . $newNumericPartPadded;
-
         // Save the new barcode to Redis
-        $redis->set('barcode', $newBarcode);
-
+        $this->redisService->set('barcode', $newBarcode);
         // Return the new barcode to the user
         return response()->json(['barcode' => $newBarcode]);
     }

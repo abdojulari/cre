@@ -12,5 +12,4 @@ Route::put('/duplicates/{id}', [DuplicateCheckerController::class,'update'])->mi
 Route::delete('/duplicates/{id}', [DuplicateCheckerController::class,'destroy'])->middleware('client');
 Route::post('/duplicates', [DuplicateCheckerController::class, 'store'])->middleware('client');
 Route::post('/lpass', [DuplicateCheckerController::class, 'lpass'])->middleware('client');
-//Route::middleware('auth:api')->post('/duplicates', [DuplicateCheckerController::class, 'store']);
 Route::get('/barcode', [BarcodeGeneratorController::class, 'create']);

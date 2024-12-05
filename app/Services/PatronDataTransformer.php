@@ -14,11 +14,53 @@ class PatronDataTransformer
      */
     public function transform(array $data): array
     {
-        return [
+        // Initialize the categories and remove null values
+        $categories = [];
+
+        // Add categories if they are not null
+        if (!empty($data['category1'])) {
+            $categories['category01'] = [
+                '@resource' => '/policy/patronCategory01',
+                '@key' => $data['category1']
+            ];
+        }
+
+        if (!empty($data['category3'])) {
+            $categories['category03'] = [
+                '@resource' => '/policy/patronCategory03',
+                '@key' => $data['category3']
+            ];
+        }
+
+        if (!empty($data['category4'])) {
+            $categories['category04'] = [
+                '@resource' => '/policy/patronCategory04',
+                '@key' => $data['category4']
+            ];
+        }
+
+        if (!empty($data['category5'])) {
+            $categories['category05'] = [
+                '@resource' => '/policy/patronCategory05',
+                '@key' => $data['category5']
+            ];
+        }
+
+        if (!empty($data['category6'])) {
+            $categories['category06'] = [
+                '@resource' => '/policy/patronCategory06',
+                '@key' => $data['category6']
+            ];
+        }
+
+        // Prepare the main array with required fields
+        $transformedData = [
             '@resource' => '/user/patron',
             'barcode' => $data['barcode'] ?? null,
             'lastName' => $data['lastname'] ?? null,
             'firstName' => $data['firstname'] ?? null,
+            // Conditionally add middleName if it's not empty
+            'middleName' => !empty($data['middlename']) ? $data['middlename'] : null,
             'library' => [
                 '@resource' => '/policy/library',
                 '@key' => $data['library'] ?? 'EPLMNA',
@@ -30,28 +72,16 @@ class PatronDataTransformer
             'pin' => $data['password'] ?? null,
             'privilegeExpiresDate' => '2030-10-03',
             'birthDate' => $data['dateofbirth'] ?? null,
-            'category01' => [
-                '@resource' => '/policy/patronCategory01',
-                '@key' => $data['category1'] ?? null,
-            ],
-            'category03' => [
-                '@resource' => '/policy/patronCategory03',
-                '@key' => $data['category3'] ?? null,
-            ],
-            'category04' => [
-                '@resource' => '/policy/patronCategory04',
-                '@key' => $data['category4'] ?? null,
-            ],
-            'category05' => [
-                '@resource' => '/policy/patronCategory05',
-                '@key' => $data['category5'] ?? null,
-            ],
-            'category06' => [
-                '@resource' => '/policy/patronCategory06',
-                '@key' => $data['category6'] ?? null,
-            ],
             'address1' => $this->transformAddress($data),
         ];
+
+        // Remove middleName from array if it's null or empty
+        if (empty($transformedData['middleName'])) {
+            unset($transformedData['middleName']);
+        }
+
+        // Merge categories into the result
+        return array_merge($transformedData, $categories);
     }
 
     /**

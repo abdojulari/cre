@@ -4,10 +4,12 @@ namespace App\Http\Controllers\DuplicateChecker;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Predis\Client;
 use Illuminate\Support\Facades\Log;
 use App\Services\RedisService;
 use App\Services\PatronDataTransformer;
+use Illuminate\Support\Facades\Http;
+use App\Mail\SendWelcomeEmail;
+use Illuminate\Support\Facades\Mail;
 
 
 class DuplicateCheckerController extends Controller
@@ -58,31 +60,29 @@ class DuplicateCheckerController extends Controller
             ], 409);
         }
     
-        // Add the record to the duplicates file
+        // Add the record to the duplicates file 
+        //TODO: replace this with the ils
         $duplicates[] = $data;
         file_put_contents($path, json_encode($duplicates));
-        // Update Redis cache after adding new record
-        //$redis->set('cre_registration_record', json_encode($duplicates));
-        
-        $this->redisService->set('cre_registration_record', $duplicates);
         // Transform and send the data to the API
         $transformedData = $this->transformer->transform($data);
-        Log::info('JUST TELL ME:', $transformedData);
-        //TODO: Http::post('ils endpoint', $transformedData);
-        //return response()->json(['success' => true, 'data' => $transformedData]);
-        return response()->json(['message' => 'Record added successfully.'], 201);
+        $response = $this->postToILS($transformedData);
+        
+        // Update Redis cache after adding new record  
+        $this->redisService->set('cre_registration_record', $duplicates);
+        // Send welcome email
+        $this->sendWelcomeEmail($data);
+        Log::info('patron', $transformedData);
+        return response()->json(['message' => 'Record added successfully.','data' => $transformedData ], 201);
     }
      
     private function retrieveDuplicateUsingCache($data, $redis) {
         // Retrieve duplicates from Redis using Predis
-       // $duplicates = json_decode($redis->get('cre_registration_record'), true) ?? [];
-        
         foreach ($redis as $duplicate) {
             if ($this->isDuplicate($duplicate, $data)) {
                 return $duplicate; // Return the duplicate record details
             }
         }
-
         return null;
     }
 
@@ -121,6 +121,67 @@ class DuplicateCheckerController extends Controller
         return (1 - $levenshtein / $maxLen) * 100;
     }
 
+    private function getSessionToken() {
+        $url = config('cre.base_url_dev') . config('cre.endpoint');
+        $body = [
+            'login' => config('cre.symws_user'),
+            'password' => config('cre.symws_pass')
+        ];
+      
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'X-sirs-clientID' => config('cre.symws_client_id'),
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        ])->asForm()->post($url, $body);
+        if ($response->successful()) {
+            return $response->json()['sessionToken'];
+        }
+        return null;
+    }
+
+    private function postToILS($data) {
+        //Call the ILS API endpoint to save the data
+        $sessionToken = $this->getSessionToken();
+        $url = config('cre.base_url_dev') . config('cre.patron_endpoint');
+        $response = Http::withHeaders([
+            'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
+            'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',
+            'sd-originating-app-id' => config('cre.apps_id'),
+            'x-sirs-clientID' => config('cre.symws_client_id'),
+            'x-sirs-sessionToken' => $sessionToken,
+            'SD-Prompt-Return' => 'USER_PRIVILEGE_OVRCD/Y'
+        ])->post($url, $data);
+        if ($response->successful()) {
+            Log::info('ILS API response', $response->json());
+            return $response->json();
+        }
+        Log::info('FAILURE', $response->json());
+        return response()->json(['message' => 'Error posting to ILS API'], 500);
+    }
+    // methid to send welcome email used in the store method
+    private function sendWelcomeEmail($data) {
+        $currentDate = new \DateTime();
+
+        // Add 3 months to the current date
+        $currentDate->modify('+3 months');
+
+        // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
+        $expiryDate = $currentDate->format('Y-m-d');
+
+        try {
+            Mail::to($data['email'])->send(new SendWelcomeEmail(
+                $data['firstname'],
+                $data['lastname'],
+                $data['barcode'],
+                $expiryDate
+            ));
+        } catch (\Exception $e) {
+            Log::error('Error sending welcome email: ' . $e->getMessage());
+        }
+    }
+
+
+    // method to update the record
     public function lpass(Request $request) {
         // Validate incoming request data
         $data = $request->validate([
@@ -218,24 +279,6 @@ class DuplicateCheckerController extends Controller
                $existingData['category6'] !== $newData['category6'] ||
                $existingData['createdAt'] !== $newData['createdAt'] ||
                $existingData['modifiedAt'] !== $newData['modifiedAt'];
-    }
-
-    // http post request to ILS API
-    private function postToILS($data) {
-        try {
-            $response = Http::withHeaders([
-                        'Authorization' => 'Bearer ' . $sessionToken,
-                        'Accept' => 'application/json',
-                    ])
-                    ->post($url, $data);
-                    if ($response->successful()) {
-                        return $response->json();
-                    }
-        } catch (\Exception $e) {
-            Log::error('Error posting to ILS API: ' . $e->getMessage());
-            return response()->json(['message' => 'Error posting to ILS API'], 500);
-        }
-
     }
 
     // update request to ILS API

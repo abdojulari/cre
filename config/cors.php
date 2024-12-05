@@ -19,16 +19,18 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://cam-dev.epl.ca', 'http://localhost:4500'],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => [ 'Accept', 'Authorization', 'Content-Type', 'X-Requested-With',],
 
     'exposed_headers' => [],
 
+    'hosts' => [],
+
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];

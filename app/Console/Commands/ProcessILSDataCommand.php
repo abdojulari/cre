@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
-use Predis\Client;
+use App\Services\RedisService;
 
 class ProcessILSDataCommand extends Command
 {
@@ -13,6 +13,13 @@ class ProcessILSDataCommand extends Command
 
     // The console command description
     protected $description = 'Run a command, process the output, and save it to Redis';
+
+    protected $redisService;
+
+    public function __construct(RedisService $redisService)
+    {
+        $this->redisService = $redisService;
+    }
 
     // Execute the console command
     public function handle()
@@ -39,15 +46,13 @@ class ProcessILSDataCommand extends Command
             }
 
             // Save JSON to Redis
-            $redisKey = 'duplicates_data';
-            $redis = new Client([
-                'scheme' => 'tcp',
-                'host'   => '127.0.0.1',
-                'port'   => 6379,
-                'database'   => '0'
-            ]);
-            $redis->set($redisKey, $jsonData);
-    
+            $existingData = $this->redisService->get('cre_registration_record');
+            if ($existingData === $jsonData) {
+                $this->info('Data is already up-to-date in Redis.');
+                return;
+            }
+            $this->redisService->set('cre_registration_record', $jsonData);
+            
             $this->info('Data saved to Redis successfully!');
 
         } catch (\Exception $e) {
