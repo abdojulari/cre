@@ -41,18 +41,20 @@ return [
             'transport' => 'smtp',
             'url' => env('MAIL_URL'),
             'host' => env('MAIL_HOST', 'smtp.epl.ca'),
-            'port' => env('MAIL_PORT'),
-            'encryption' => env('MAIL_ENCRYPTION'),
+            'port' => env('MAIL_PORT', 587),
+            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
+            'auth_mode' => null,
+            'verify_peer' => false,
+            'verify_peer_name' => false,
             //'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
         'ses' => [
             'transport' => 'ses',
         ],
-
         'postmark' => [
             'transport' => 'postmark',
             // 'message_stream_id' => env('POSTMARK_MESSAGE_STREAM_ID'),
@@ -90,6 +92,7 @@ return [
         'roundrobin' => [
             'transport' => 'roundrobin',
             'mailers' => [
+                'smtp',
                 'ses',
                 'postmark',
             ],
@@ -110,7 +113,7 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'noreply@epl.ca'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'EPL')),
+        'name' => env('MAIL_FROM_NAME', env('Do Not Reply', 'EPL')),
     ],
 
 ];

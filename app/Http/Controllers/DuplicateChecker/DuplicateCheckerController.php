@@ -27,6 +27,7 @@ class DuplicateCheckerController extends Controller
         $data = $request->validate([
             'firstname' => 'required|string',
             'lastname' => 'required|string',
+            'middlename' => 'nullable|string',
             'dateofbirth' => 'required|date',
             'email' => 'required|email',
             'phone' => 'required|string',
@@ -60,20 +61,36 @@ class DuplicateCheckerController extends Controller
             ], 409);
         }
     
-        // Add the record to the duplicates file 
-        //TODO: replace this with the ils
-        $duplicates[] = $data;
-        file_put_contents($path, json_encode($duplicates));
-        // Transform and send the data to the API
         $transformedData = $this->transformer->transform($data);
-        $response = $this->postToILS($transformedData);
-        
-        // Update Redis cache after adding new record  
-        $this->redisService->set('cre_registration_record', $duplicates);
-        // Send welcome email
-        $this->sendWelcomeEmail($data);
-        Log::info('patron', $transformedData);
-        return response()->json(['message' => 'Record added successfully.','data' => $transformedData ], 201);
+       
+        // Wrap the ILS post call in try-catch block to handle errors
+        try {
+            $response = $this->postToILS($transformedData);
+            
+            if (!$response) {
+                // If postToILS returns null or a failure response, we handle it
+                return response()->json(['message' => 'Error posting to ILS API'], 500);
+            }
+            
+            // If ILS API call was successful, proceed to update Redis
+            // Add the record to the duplicates file (TODO: replace with actual ILS)
+            $duplicates[] = $data;
+            file_put_contents($path, json_encode($duplicates));
+
+            // Update Redis cache after adding the new record
+            $this->redisService->set('cre_registration_record', $duplicates);
+
+            // Send welcome email
+            $this->sendWelcomeEmail($data);
+
+            Log::info('patron', $transformedData);
+            return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
+        } catch (\Exception $e) {
+            // If there's an error with the ILS API call, handle the exception and prevent Redis write
+            Log::error('Error posting to ILS API: ' . $e->getMessage());
+            return response()->json(['message' => 'Error posting to ILS API'], 500);
+        }
+
     }
      
     private function retrieveDuplicateUsingCache($data, $redis) {
@@ -96,10 +113,7 @@ class DuplicateCheckerController extends Controller
             $this->similarity($record1['lastname'], $record2['lastname']),
             $this->similarity($record1['email'], $record2['email']),
             $this->similarity($record1['phone'], $record2['phone']),
-            $this->similarity($record1['address'], $record2['address']),
             $this->similarity($record1['dateofbirth'], $record2['dateofbirth']),
-            $this->similarity($record1['postalcode'], $record2['postalcode']),
-            $this->similarity($record1['city'], $record2['city']),
         ];
 
         // Check if the average similarity exceeds the threshold
@@ -179,7 +193,6 @@ class DuplicateCheckerController extends Controller
             Log::error('Error sending welcome email: ' . $e->getMessage());
         }
     }
-
 
     // method to update the record
     public function lpass(Request $request) {
