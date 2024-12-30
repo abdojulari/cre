@@ -7,20 +7,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Services\RedisService;
 use App\Services\PatronDataTransformer;
+use App\Services\AccuracyDataService;
 use Illuminate\Support\Facades\Http;
 use App\Mail\SendWelcomeEmail;
 use Illuminate\Support\Facades\Mail;
-
 
 class DuplicateCheckerController extends Controller
 {
     protected $transformer;
     protected $redisService;
+    protected $accuracyDataService;
 
-    public function __construct(PatronDataTransformer $transformer, RedisService $redisService)
+    public function __construct(PatronDataTransformer $transformer, RedisService $redisService, AccuracyDataService $accuracyDataService)
     {
         $this->transformer = $transformer;
         $this->redisService = $redisService;
+        $this->accuracyDataService = $accuracyDataService;
     }
   
     public function store(Request $request) {
@@ -51,7 +53,16 @@ class DuplicateCheckerController extends Controller
         // Check if the record already exists
         $path = storage_path('app/duplicates.json');
         $duplicates = json_decode(file_get_contents($path), true) ?? [];
-        $redis = $this->redisService->get('cre_registration_record') ?? [];
+        // Get and decode Redis data if necessary
+        $redisData = $this->redisService->get('cre_registration_record');
+        // Check if $redisData is already an array, otherwise decode it if it's a string
+        if (is_string($redisData)) {
+            $redis = json_decode($redisData, true) ?? [];
+        } elseif (is_array($redisData)) {
+            $redis = $redisData;
+        } else {
+            $redis = [];
+        }
         // Fuzzy logic check
         $duplicate = $this->retrieveDuplicateUsingCache($data, $redis);
         if ($duplicate) {
@@ -71,9 +82,7 @@ class DuplicateCheckerController extends Controller
                 // If postToILS returns null or a failure response, we handle it
                 return response()->json(['message' => 'Error posting to ILS API'], 500);
             }
-            
             // If ILS API call was successful, proceed to update Redis
-            // Add the record to the duplicates file (TODO: replace with actual ILS)
             $duplicates[] = $data;
             file_put_contents($path, json_encode($duplicates));
 
@@ -103,38 +112,182 @@ class DuplicateCheckerController extends Controller
         return null;
     }
 
-    private function isDuplicate($record1, $record2) {
-        // Define a similarity threshold
-        $threshold = 80;
+    // private function isDuplicate($record1, $record2) {
+    //     // Age calculation to determine if the incoming record is a minor
+    //     $dob1 = new \DateTime($record1['dateofbirth']);
+    //     $dob2 = new \DateTime($record2['dateofbirth']);
+    //     $age1 = $dob1->diff(new \DateTime())->y;
+    //     $age2 = $dob2->diff(new \DateTime())->y;
 
-        // Compare multiple fields
-        $similarities = [
-            $this->similarity($record1['firstname'], $record2['firstname']),
-            $this->similarity($record1['lastname'], $record2['lastname']),
-            $this->similarity($record1['email'], $record2['email']),
-            $this->similarity($record1['phone'], $record2['phone']),
-            $this->similarity($record1['dateofbirth'], $record2['dateofbirth']),
-        ];
-
-        // Check if the average similarity exceeds the threshold
-        $averageSimilarity = array_sum($similarities) / count($similarities);
+    //     $isMinor1 = $age1 < 18;
+    //     $isMinor2 = $age2 < 18;
+    //     // Define the weights for each field
+    //     $fieldWeights = [
+    //         'firstname' => 1.0,
+    //         'lastname' => 1.0,
+    //         'phone' => 3.0,  // Phone should be more strictly matched
+    //         'email' => 3.0,  // Email should be more strictly matched
+    //         'dateofbirth' => 1.0,  // Higher tolerance for DOB (since it's standardized)
+    //         'address' => 3.0,  // Address is somewhat flexible
+    //     ];
     
-        return $averageSimilarity > $threshold;
+    //     // If the incoming record is a minor, reduce the strictness for phone and email matching
+    //     if ($isMinor1 && $isMinor2) {
+    //         // Minor record: Allow same phone/email, reduce their weight
+    //         Log::info('Minor record');
+    //         if (
+    //             isset($record1['lastname']) && isset($record2['lastname']) 
+    //             && strtolower($record1['lastname']) === strtolower($record2['lastname'])
+    //             && strtolower($record1['phone']) === strtolower($record2['phone'])
+    //             && strtolower($record1['email']) === strtolower($record2['email'])
+    //             ) {
+    //                 $fieldWeights['phone'] = 1.0;
+    //                 $fieldWeights['email'] = 1.0;
+    //                 $fieldWeights['address'] = 1.0;
+
+    //         }
+           
+    //     }  // If one record is a minor, allow relaxed matching only if the last names match
+    //     elseif ($isMinor1 && !$isMinor2) {
+    //         if (
+    //             isset($record1['lastname']) && isset($record2['lastname']) 
+    //             && strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
+    //             // If last names match, allow relaxed matching for phone/email
+    //             $fieldWeights['phone'] = 1.0;
+    //             $fieldWeights['email'] = 1.0;
+    //             $fieldWeights['address'] = 1.0;
+    //         } else {
+    //             // If last names don't match, enforce strict matching for phone/email
+    //             $fieldWeights['phone'] = 3.0;
+    //             $fieldWeights['email'] = 3.0;
+    //         }
+    //     }
+    //     elseif (!$isMinor1 && $isMinor2) {
+    //         if (isset($record1['lastname']) && isset($record2['lastname']) && strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
+    //             // If last names match, allow relaxed matching for phone/email
+    //             $fieldWeights['phone'] = 1.0;
+    //             $fieldWeights['email'] = 1.0;
+    //             $fieldWeights['address'] = 1.0;
+    //         } else {
+    //             // If last names don't match, enforce strict matching for phone/email
+    //             $fieldWeights['phone'] = 3.0;
+    //             $fieldWeights['email'] = 3.0;
+    //         }
+    //     }
+
+    //     // If both records are adults, phone and email must be unique
+    //     if (!$isMinor1 && !$isMinor2) {
+    //         // Adults cannot have the same phone/email, enforce strict matching
+    //         $fieldWeights['phone'] = 3.0;  // Strict phone matching
+    //         $fieldWeights['email'] = 3.0;  // Strict email matching
+    //     }
+    //     $totalSimilarityScore = 0;
+    //     $totalWeight = 0;
+    
+    //     // Compare each field with the appropriate weight
+    //     foreach ($fieldWeights as $field => $weight) {
+    //         // Use similarity function for each field
+    //         $similarity = $this->similarity($record1[$field] ?? '', $record2[$field] ?? '', $weight);
+            
+    //         // Accumulate the weighted similarity score
+    //         $totalSimilarityScore += $similarity;
+    //         $totalWeight += $weight;
+    //     }
+    
+    //     // Normalize the total score by the total weight
+    //     $averageSimilarity = $totalSimilarityScore / $totalWeight;
+    //     Log::info('Average similarity: ' . $averageSimilarity);
+    //     return $averageSimilarity > 75;  // Adjust threshold as needed
+    // }
+    private function isDuplicate($record1, $record2) {
+        // Age calculation
+        $dob1 = new \DateTime($record1['dateofbirth']);
+        $dob2 = new \DateTime($record2['dateofbirth']);
+        $age1 = $dob1->diff(new \DateTime())->y;
+        $age2 = $dob2->diff(new \DateTime())->y;
+    
+        $isMinor1 = $age1 < 18;
+        $isMinor2 = $age2 < 18;
+    
+        // If they share the same lastname
+        if (strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
+            // Case 1: Both are minors with same lastname
+            if ($isMinor1 && $isMinor2) {
+                // Only compare firstname and DOB
+                $fieldWeights = [
+                    'firstname' => 1.0,
+                    'dateofbirth' => 1.0
+                ];
+            }
+            // Case 2: One is minor, one is adult (potential parent-child)
+            else if ($isMinor1 xor $isMinor2) {
+                // Allow shared contact details for parent-child
+                return false;  // Not a duplicate
+            }
+            // Case 3: Both are adults with same lastname
+            else {
+                $fieldWeights = [
+                    'firstname' => 1.0,
+                    'lastname' => 1.0,
+                    'phone' => 3.0,
+                    'email' => 3.0,
+                    'dateofbirth' => 1.0,
+                    'address' => 3.0
+                ];
+            }
+        }
+        // Different lastnames
+        else {
+            // For different lastnames, require unique contact details
+            if (
+                strtolower($record1['email']) === strtolower($record2['email']) ||
+                strtolower($record1['phone']) === strtolower($record2['phone'])
+            ) {
+                return true; // Consider it a duplicate if contact details match
+            }
+            
+            $fieldWeights = [
+                'firstname' => 1.0,
+                'lastname' => 1.0,
+                'dateofbirth' => 1.0,
+                'address' => 1.0
+            ];
+        }
+    
+        $totalSimilarityScore = 0;
+        $totalWeight = 0;
+    
+        foreach ($fieldWeights as $field => $weight) {
+            if (!isset($record1[$field]) || !isset($record2[$field])) {
+                continue;
+            }
+            $similarity = $this->similarity($record1[$field], $record2[$field], $weight);
+            $totalSimilarityScore += $similarity;
+            $totalWeight += $weight;
+        }
+    
+        $averageSimilarity = $totalWeight > 0 ? $totalSimilarityScore / $totalWeight : 0;
+        
+        return $averageSimilarity > 75;
     }
 
-    private function similarity($str1, $str2) {
-        // Use Levenshtein distance or any other string similarity metric
-        // The Levenshtein distance is a string metric for measuring the difference between two sequences
+    private function similarity($str1, $str2, $weight = 1) {
+        // Calculate Levenshtein distance
         $levenshtein = levenshtein($str1, $str2);
         $maxLen = max(strlen($str1), strlen($str2));
-        // Calculate similarity percentage
+        
+        // If maxLen is 0, return 100 similarity (i.e., same string)
         if ($maxLen == 0) {
-            return 100;
+            return 100 * $weight;
         }
-
-        return (1 - $levenshtein / $maxLen) * 100;
+    
+        // Calculate normalized similarity score
+        $normalizedSimilarity = (1 - $levenshtein / $maxLen) * 100;
+        
+        // Apply the weight to the similarity score
+        return $normalizedSimilarity * $weight;
     }
-
+    
     private function getSessionToken() {
         $url = config('cre.base_url_dev') . config('cre.endpoint');
         $body = [
@@ -172,6 +325,28 @@ class DuplicateCheckerController extends Controller
         Log::info('FAILURE', $response->json());
         return response()->json(['message' => 'Error posting to ILS API'], 500);
     }
+
+    // update request to ILS API
+    private function updateToILS($data) {
+        $sessionToken = $this->getSessionToken();
+        $url = config('cre.base_url_dev') . config('cre.patron_endpoint') .'/key/'.$data['barcode'];
+        try {
+            $response = Http::withHeaders([
+                'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
+                'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',
+                'sd-originating-app-id' => config('cre.apps_id'),
+                'x-sirs-clientID' => config('cre.symws_client_id'),
+                'x-sirs-sessionToken' => $sessionToken,
+                'SD-Prompt-Return' => 'USER_PRIVILEGE_OVRCD/Y'
+            ])->put($url, $data);
+                    if ($response->successful()) {
+                        return $response->json();
+                    }
+        } catch (\Exception $e) {
+            Log::error('Error updating to ILS API: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating to ILS API'], 500);
+        }
+    }
     // methid to send welcome email used in the store method
     private function sendWelcomeEmail($data) {
         $currentDate = new \DateTime();
@@ -194,12 +369,12 @@ class DuplicateCheckerController extends Controller
         }
     }
 
-    // method to update the record
     public function lpass(Request $request) {
         // Validate incoming request data
         $data = $request->validate([
             'firstname' => 'required|string',
             'lastname' => 'required|string',
+            'middlename' => 'nullable|string',
             'dateofbirth' => 'required|date',
             'email' => 'required|email',
             'phone' => 'required|string',
@@ -213,99 +388,143 @@ class DuplicateCheckerController extends Controller
             'category3' => 'nullable|string',
             'category4' => 'nullable|string',
             'category5' => 'nullable|string',
-            'category6' => 'nullable|string',
-            'createdAt' => 'required|date',
-            'modifiedAt' => 'required|date'
+            'category6' => 'nullable|string'
         ]);
     
-        // Connect to Redis
-        $redis = new Client([
-            'scheme' => 'tcp',
-            'host'   => 'localhost',  // Update with the actual Redis server host
-            'port'   => 6379,
-            'database' => 0
-        ]);
+        // Add timestamps
+        $data['createdAt'] = now()->toDateTimeString();
+        $data['modifiedAt'] = now()->toDateTimeString();
     
-        // Fetch all records from Redis
-        $dataFromRedis = json_decode($redis->get('cre_registration_record'), true) ?? [];
-    
-        // Initialize flags for checking existence
-        $recordExists = false;
-        $existingData = null;
-    
-        // Loop through the existing records and check for matching barcode and dateofbirth
-        foreach ($dataFromRedis as $record) {
-            if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
-                // Record found, so we can check if it needs to be updated
-                $recordExists = true;
-                $existingData = $record;
-                break;  // No need to check further once we've found the record
-            }
-        }
-    
-        if ($recordExists) {
-            // If record exists, compare it with the new data
-            if ($this->dataHasChanged($existingData, $data)) {
-                // Update the record in the existing data array
-                foreach ($dataFromRedis as &$record) {
-                    if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
-                        $record = $data; // Update the record with new data
-                        break;
-                    }
-                }
-    
-                // Save the updated data back to Redis
-                $redis->set('cre_registration_record', json_encode($dataFromRedis));
-                // TODO: then call the ILS API endpoint to UPDATE the data to the database
-                return response()->json(['message' => 'Record updated in Redis']);
-            } else {
-                // No change detected
-                return response()->json(['message' => 'No changes detected. Record unchanged']);
-            }
-        } else {
-            // If no matching record, insert the new record
-            $dataFromRedis[] = $data; // Append the new record to the array
-            // Save the updated data back to Redis
-            $redis->set('cre_registration_record', json_encode($dataFromRedis));
-
-            //TODO: then call the ILS API endpoint to save the data to the database
-            return response()->json(['message' => 'New record created in Redis']);
-        }
-    }
-    
-    // Helper function to compare existing and new data
-    private function dataHasChanged($existingData, $newData) {
-        // Compare the relevant fields between existing and new data
-        return $existingData['firstname'] !== $newData['firstname'] ||
-               $existingData['lastname'] !== $newData['lastname'] ||
-               $existingData['email'] !== $newData['email'] ||
-               $existingData['phone'] !== $newData['phone'] ||
-               $existingData['address'] !== $newData['address'] ||
-               $existingData['postalcode'] !== $newData['postalcode'] ||
-               $existingData['city'] !== $newData['city'] ||
-               $existingData['careof'] !== $newData['careof'] ||
-               $existingData['category1'] !== $newData['category1'] ||
-               $existingData['category2'] !== $newData['category2'] ||
-               $existingData['category3'] !== $newData['category3'] ||
-               $existingData['category4'] !== $newData['category4'] ||
-               $existingData['category5'] !== $newData['category5'] ||
-               $existingData['category6'] !== $newData['category6'] ||
-               $existingData['createdAt'] !== $newData['createdAt'] ||
-               $existingData['modifiedAt'] !== $newData['modifiedAt'];
-    }
-
-    // update request to ILS API
-    private function updateToILS($data) {
         try {
-            $response = Http::withHeaders([])
-                    ->put($url, $data);
-                    if ($response->successful()) {
-                        return $response->json();
+            // Get Redis data and handle the case where it might be null
+            $redisData = $this->redisService->get('cre_registration_record');
+
+            // Initialize the array of records
+            $dataFromRedis = [];
+            
+            // If Redis data exists and is already an array, use it directly
+            if ($redisData !== null) {
+                if (is_array($redisData)) {
+                    $dataFromRedis = $redisData;
+                } elseif (is_string($redisData)) {
+                    $dataFromRedis = json_decode($redisData, true) ?? [];
+                }
+            }
+    
+            // Initialize flags for checking existence
+            $recordExists = false;
+            $existingData = null;
+    
+            // Loop through the existing records and check for matching barcode and dateofbirth
+            foreach ($dataFromRedis as $record) {
+                if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
+                    $recordExists = true;
+                    $existingData = $record;
+                    break;
+                }
+            }
+    
+            if ($recordExists) {
+                // If record exists, compare it with the new data
+                if ($this->dataHasChanged($existingData, $data)) {
+                    // Update the record in the existing data array
+                    foreach ($dataFromRedis as &$record) {
+                        if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
+                            $record = $data;
+                            break;
+                        }
                     }
+    
+                    // Always encode as JSON before saving to Redis
+                    $this->redisService->set('cre_registration_record', json_encode($dataFromRedis));
+                    $transformedData = $this->transformer->transform($dataFromRedis);
+                    Log::info('Updated record in Redis:', ['updatedData' => $data]);
+                    return response()->json(['message' => 'Record updated in Redis']);
+                } else {
+                    Log::info('No changes detected for record:', ['data' => $data]);
+                    return response()->json(['message' => 'No changes detected. Record unchanged']);
+                }
+            } else {
+                // If no matching record, insert the new record
+                $dataFromRedis[] = $data;
+
+                $transformedData = $this->transformer->transform($data);
+                $response = $this->postToILS($transformedData);
+            
+                if (!$response) {
+                    // If postToILS returns null or a failure response, we handle it
+                    return response()->json(['message' => 'Error posting to ILS API'], 500);
+                }
+                // Always encode as JSON before saving to Redis
+                $this->redisService->set('cre_registration_record', json_encode($dataFromRedis));
+                Log::info('New record added to Redis:', ['newData' => $data]);
+                return response()->json(['message' => 'New record created in Redis']);
+            }
         } catch (\Exception $e) {
-            Log::error('Error updating to ILS API: ' . $e->getMessage());
-            return response()->json(['message' => 'Error updating to ILS API'], 500);
+            Log::error('Redis operation failed:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to process request'], 500);
         }
     }
-                
+    
+    private function dataHasChanged($existingData, $newData) {
+        $fieldsToCompare = [
+            'firstname', 'lastname', 'email', 'phone', 'address', 
+            'postalcode', 'city', 'careof', 
+            'category1', 'category2', 'category3', 'category4', 'category5', 'category6'
+        ];
+    
+        foreach ($fieldsToCompare as $field) {
+            if (($existingData[$field] ?? null) !== ($newData[$field] ?? null)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    // Confusion matrix for accuracy 
+
+    public function evaluateDuplicates()
+    {
+        $testData =  $this->accuracyDataService->generateTestData(); //$this->generateTestData(); // Generate or fetch your test data
+        $confusionMatrix = [
+            'TP' => 0, // True Positives
+            'FP' => 0, // False Positives
+            'FN' => 0, // False Negatives
+            'TN' => 0, // True Negatives
+        ];
+
+        foreach ($testData as $pair) {
+            $record1 = $pair[0];
+            $record2 = $pair[1];
+
+            // Assume that the second item in the pair is the expected result for duplication
+            $isDuplicate = $this->isDuplicate($record1, $record2);
+            $expectedDuplicate = $pair['expected_duplicate']; // Should be either true or false
+    
+            // Compare the actual result with the expected result and increment the confusion matrix
+            if ($isDuplicate && $expectedDuplicate) {
+                $confusionMatrix['TP']++;
+            } elseif (!$isDuplicate && !$expectedDuplicate) {
+                $confusionMatrix['TN']++;
+            } elseif ($isDuplicate && !$expectedDuplicate) {
+                $confusionMatrix['FP']++;
+            } elseif (!$isDuplicate && $expectedDuplicate) {
+                $confusionMatrix['FN']++;
+            }
+        }
+
+        // Calculate accuracy or other metrics
+        $accuracy = (($confusionMatrix['TP'] + $confusionMatrix['TN']) / array_sum($confusionMatrix)) * 100;
+        // Format the accuracy to 2 decimal places
+        $accuracyFormatted = number_format($accuracy, 2);
+        return response()->json([
+            'confusion_matrix' => $confusionMatrix,
+            'accuracy' => $accuracyFormatted. '%'
+        ]);
+    }
+        
 }

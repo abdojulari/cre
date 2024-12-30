@@ -7,6 +7,50 @@ n is the length of one string.
 m is the length of the other string
 ```
 
+```
+| Field         | Weight | Rationale                                                                 |
+|---------------|--------|---------------------------------------------------------------------------|
+| firstname     | 1.0    | Important but not the sole identifier (e.g., common names).               |
+| lastname      | 1.0    | Important but not definitive (e.g., people with the same surname).        |
+| phone         | 2.0    | Strong indicator of a single individual; exact matches are crucial.      |
+| email         | 2.0    | Strong indicator; same email likely indicates the same person.           |
+| dateofbirth   | 1.0    | Useful for differentiation but some flexibility is allowed (e.g., twins).|
+| address       | 0.8    | Less strict due to possible variations (e.g., different apartments).      |
+
+```
+## Experiment
+
+Experiment with these weights to tune the algorithm for your real-world data and specific requirements.
+
+## Example Scenario
+
+Let's say you have two records:
+
+### Record 1:
+- **firstname**: John
+- **lastname**: Doe
+- **phone**: 123-456-7890
+- **email**: john.doe@example.com
+- **dateofbirth**: 1990-01-01
+- **address**: 123 Elm St
+
+### Record 2:
+- **firstname**: John
+- **lastname**: Doe
+- **phone**: 123-456-7890
+- **email**: john.doe@example.com
+- **dateofbirth**: 1990-01-01
+- **address**: 123 Elm St, Apt 2
+
+### Similarity Calculation:
+
+- For **phone** and **email**, since they match exactly, they contribute significantly to the similarity score (because both fields have a weight of **2.0**).
+- **firstname** and **lastname** are both the same, contributing normally (weight **1.0**).
+- **address** is slightly different (Apt 2 is added in Record 2), so it will have a smaller contribution (since address has a weight of **0.8**).
+- **dateofbirth** is the same, contributing as expected (weight **1.0**).
+
+In this case, the fields that match perfectly will strongly drive the final score towards being a duplicate, even though there’s a slight variation in the address.
+
 ## Development Environment
 
 - **Laravel Herd**
@@ -95,4 +139,19 @@ php artisan data:process
 **CORS**
 ```
 php artisan config:publish cors
+```
+
+
+# Test
+
+### Set up
+**Migration**
+```
+php artisan migrate --env=testing
+```
+**Generate Authorization Token :**
+Generate client_id and client_secret for the test environment 
+
+```
+php artisan passport:client --env=testing
 ```

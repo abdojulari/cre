@@ -13,3 +13,5 @@ Route::delete('/duplicates/{id}', [DuplicateCheckerController::class,'destroy'])
 Route::post('/duplicates', [DuplicateCheckerController::class, 'store'])->middleware('client');
 Route::post('/lpass', [DuplicateCheckerController::class, 'lpass'])->middleware('client');
 Route::get('/barcode', [BarcodeGeneratorController::class, 'create']);
+Route::get('/accuracy', [DuplicateCheckerController::class, 'evaluateDuplicates']);
+
