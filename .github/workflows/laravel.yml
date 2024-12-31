@@ -74,23 +74,64 @@ jobs:
       run: |
         php artisan migrate:fresh --force
         
-    - name: Setup Passport
-      env:
-        DB_CONNECTION: mysql
-        DB_HOST: 127.0.0.1
-        DB_PORT: 3306
-        DB_DATABASE: testing
-        DB_USERNAME: root
-        DB_PASSWORD: ''
-      run: |
-        php artisan passport:keys
-        client_output=$(php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction)
-        client_id=$(echo "$client_output" | grep -oP "Client ID: \K[0-9]+")
-        client_secret=$(echo "$client_output" | grep -oP "Client secret: \K[a-zA-Z0-9]+")
-        sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$client_id/" .env
-        sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$client_secret/" .env
-        echo "Updated CLIENT_ID: $client_id"
-        echo "Updated CLIENT_SECRET: $client_secret"
+        - name: Setup Passport
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: |
+          # Generate encryption keys
+          php artisan passport:keys
+          
+          # Create client and save full output for debugging
+          echo "Creating Passport client..."
+          client_output=$(php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction)
+          echo "Raw client output:"
+          echo "$client_output"
+          
+          # Extract values using more flexible pattern matching
+          if [[ $client_output =~ "Client ID: "([0-9]+) ]]; then
+              client_id="${BASH_REMATCH[1]}"
+          else
+              echo "Failed to extract Client ID"
+              exit 1
+          fi
+          
+          if [[ $client_output =~ "Client secret: "([a-zA-Z0-9]+) ]]; then
+              client_secret="${BASH_REMATCH[1]}"
+          else
+              echo "Failed to extract Client secret"
+              exit 1
+          fi
+          
+          # Check if values were extracted
+          if [ -z "$client_id" ] || [ -z "$client_secret" ]; then
+              echo "Failed to extract client credentials"
+              exit 1
+          fi
+          
+          # Create new .env with updated values
+          cp .env .env.backup
+          echo "Creating new .env with updated credentials..."
+          
+          cat .env.backup | while read line; do
+              if [[ $line == CLIENT_ID=* ]]; then
+                  echo "CLIENT_ID=$client_id"
+              elif [[ $line == CLIENT_SECRET=* ]]; then
+                  echo "CLIENT_SECRET=$client_secret"
+              else
+                  echo "$line"
+              fi
+          done > .env.new
+          
+          mv .env.new .env
+          
+          # Verify the update
+          echo "Verifying .env updates..."
+          cat .env | grep -E "CLIENT_ID|CLIENT_SECRET"
         
     - name: Cache Configuration and Auto-Load
       run: | 
