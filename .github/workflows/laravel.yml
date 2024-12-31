@@ -83,16 +83,12 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: ''
         run: |
-          # Generate encryption keys
           php artisan passport:keys
-          
-          # Create client and save full output for debugging
           echo "Creating Passport client..."
           client_output=$(php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction)
           echo "Raw client output:"
           echo "$client_output"
-          
-          # Extract values using more flexible pattern matching
+
           if [[ $client_output =~ "Client ID: "([0-9]+) ]]; then
               client_id="${BASH_REMATCH[1]}"
           else
@@ -107,13 +103,11 @@ jobs:
               exit 1
           fi
           
-          # Check if values were extracted
           if [ -z "$client_id" ] || [ -z "$client_secret" ]; then
               echo "Failed to extract client credentials"
               exit 1
           fi
           
-          # Create new .env with updated values
           cp .env .env.backup
           echo "Creating new .env with updated credentials..."
           
@@ -128,8 +122,7 @@ jobs:
           done > .env.new
           
           mv .env.new .env
-          
-          # Verify the update
+        
           echo "Verifying .env updates..."
           cat .env | grep -E "CLIENT_ID|CLIENT_SECRET"
         
