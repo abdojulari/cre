@@ -89,8 +89,8 @@ jobs:
       run: |
           php artisan tinker --execute="DB::table('oauth_clients')->insert([
               'name' => 'Testing Personal Access Client',
-              'client_secret' => '228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4',
-              'client_id' => '9dd80945-481f-4c5e-b70c-95aaf721e12c',
+              'secret' => '228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4',
+              'id' => '9dd80945-481f-4c5e-b70c-95aaf721e12c',
               'created_at' => now(),
               'updated_at' => now()
           ]);"    
