@@ -72,7 +72,8 @@ it('can get a bearer token using /oauth/token endpoint', function () {
     // Extract the token from the response
     $this->token = $response->json('access_token');
 
-    dump('RESPONSE',  $response);
+    var_dump('RESPONSE',  $response);
+    dd('TOKEN', $response);
     // Assert that the token is returned and is not null
     expect($this->token)->not()->toBeNull();
 });

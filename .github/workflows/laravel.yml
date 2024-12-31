@@ -127,4 +127,4 @@ jobs:
         REDIS_PORT: 6379
         CLIENT_ID: 9dd80945-481f-4c5e-b70c-95aaf721e12c
         CLIENT_SECRET: 228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4
-      run: php artisan test --verbose
+      run: php artisan test --coverage
