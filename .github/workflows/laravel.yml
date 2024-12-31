@@ -114,7 +114,7 @@ jobs:
     - name: Debug OAuth Clients
       run: php artisan tinker --execute="DB::table('oauth_clients')->get()->toJson();"
     - name: Install xdebug
-      run: sudo apt-get install php-xdebug  
+      run: sudo apt-get install php8.4-xdebug  
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
       env:
         DB_CONNECTION: mysql
