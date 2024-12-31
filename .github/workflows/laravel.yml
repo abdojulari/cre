@@ -74,58 +74,26 @@ jobs:
       run: |
         php artisan migrate:fresh --force
         
-        - name: Setup Passport
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: root
-          DB_PASSWORD: ''
-        run: |
-          php artisan passport:keys
-          echo "Creating Passport client..."
-          client_output=$(php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction)
-          echo "Raw client output:"
-          echo "$client_output"
-
-          if [[ $client_output =~ "Client ID: "([0-9]+) ]]; then
-              client_id="${BASH_REMATCH[1]}"
-          else
-              echo "Failed to extract Client ID"
-              exit 1
-          fi
-          
-          if [[ $client_output =~ "Client secret: "([a-zA-Z0-9]+) ]]; then
-              client_secret="${BASH_REMATCH[1]}"
-          else
-              echo "Failed to extract Client secret"
-              exit 1
-          fi
-          
-          if [ -z "$client_id" ] || [ -z "$client_secret" ]; then
-              echo "Failed to extract client credentials"
-              exit 1
-          fi
-          
-          cp .env .env.backup
-          echo "Creating new .env with updated credentials..."
-          
-          cat .env.backup | while read line; do
-              if [[ $line == CLIENT_ID=* ]]; then
-                  echo "CLIENT_ID=$client_id"
-              elif [[ $line == CLIENT_SECRET=* ]]; then
-                  echo "CLIENT_SECRET=$client_secret"
-              else
-                  echo "$line"
-              fi
-          done > .env.new
-          
-          mv .env.new .env
-        
-          echo "Verifying .env updates..."
-          cat .env | grep -E "CLIENT_ID|CLIENT_SECRET"
-        
+    - name: Setup Passport
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: ''
+      run: |
+        php artisan passport:keys
+    
+    - name: Manual client creation
+      run: |
+          php artisan tinker --execute="DB::table('oauth_clients')->insert([
+              'name' => 'Testing Personal Access Client',
+              'client_secret' => '228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4',
+              'client_id' => '9dd80945-481f-4c5e-b70c-95aaf721e12c',
+              'created_at' => now(),
+              'updated_at' => now()
+          ]);"    
     - name: Cache Configuration and Auto-Load
       run: | 
         php artisan cache:clear
@@ -144,4 +112,6 @@ jobs:
         REDIS_HOST: 127.0.0.1
         REDIS_PASSWORD: null
         REDIS_PORT: 6379
+        CLIENT_ID: 9dd80945-481f-4c5e-b70c-95aaf721e12c
+        CLIENT_SECRET: 228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4
       run: php artisan test
