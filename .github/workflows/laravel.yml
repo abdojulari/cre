@@ -91,6 +91,7 @@ jobs:
               'name' => 'Testing Personal Access Client',
               'secret' => '228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4',
               'id' => '9dd80945-481f-4c5e-b70c-95aaf721e12c',
+              'redirect' => 'http://localhost',
               'created_at' => now(),
               'updated_at' => now()
           ]);"    
