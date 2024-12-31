@@ -39,6 +39,10 @@ beforeEach(function () {
     // Store the access token for reuse in the tests
     $this->token = $response->json('access_token');
 });
+
+afterEach(function () {
+    Mockery::close();
+});
 // write a test that checks if the DuplicateCheckerController exists
 it('checks if the DuplicateCheckerController exists', function () {
     $this->assertTrue(class_exists(DuplicateCheckerController::class));

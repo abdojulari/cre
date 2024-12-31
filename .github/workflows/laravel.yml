@@ -85,6 +85,13 @@ jobs:
       run: |
         php artisan passport:keys
         php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction
+    
+    - name: Cache Configuration and Auto-Load
+      run: | 
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan route:clear
+        php artisan view:clear
         
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
       env:
