@@ -84,15 +84,21 @@ jobs:
         DB_PASSWORD: ''
       run: |
         php artisan passport:keys
-        php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction
-    
+        client_output=$(php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction)
+        client_id=$(echo "$client_output" | grep -oP "Client ID: \K[0-9]+")
+        client_secret=$(echo "$client_output" | grep -oP "Client secret: \K[a-zA-Z0-9]+")
+        sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$client_id/" .env
+        sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$client_secret/" .env
+        echo "Updated CLIENT_ID: $client_id"
+        echo "Updated CLIENT_SECRET: $client_secret"
+        
     - name: Cache Configuration and Auto-Load
       run: | 
         php artisan cache:clear
         php artisan config:clear
         php artisan route:clear
         php artisan view:clear
-        
+
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
       env:
         DB_CONNECTION: mysql
