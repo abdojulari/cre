@@ -71,9 +71,10 @@ jobs:
         DB_DATABASE: testing
         DB_USERNAME: root
         DB_PASSWORD: ''
-      run: php artisan migrate
+      run: |
+        php artisan migrate:fresh --force
         
-    - name: Generate Passport Client
+    - name: Setup Passport
       env:
         DB_CONNECTION: mysql
         DB_HOST: 127.0.0.1
@@ -82,8 +83,8 @@ jobs:
         DB_USERNAME: root
         DB_PASSWORD: ''
       run: |
-        php artisan passport:install
-        php artisan passport:client --personal --name="Testing Personal Access Client"
+        php artisan passport:keys
+        php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction
         
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
       env:
