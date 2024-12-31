@@ -84,7 +84,11 @@ jobs:
         DB_PASSWORD: ''
       run: |
         php artisan passport:keys
-    
+
+    - name: Debug Passport Keys
+      run: |
+        ls -l storage/oauth*
+      
     - name: Manual client creation
       run: |
           php artisan tinker --execute="DB::table('oauth_clients')->insert([
