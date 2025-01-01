@@ -88,22 +88,22 @@ jobs:
     - name: Debug Passport Keys
       run: |
         ls -l storage/oauth*
-      
-    - name: Manual client creation
+
+    - name: Generate Client ID and Secret
+      run: php artisan passport:client --name="Testing Personal Access Client" --no-interaction > passport_client_output.txt         
+    
+    - name: Extract Client ID and Secret
       run: |
-          php artisan tinker --execute="DB::table('oauth_clients')->insert([
-              'name' => 'Testing Personal Access Client',
-              'secret' => '228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4',
-              'id' => '9dd80945-481f-4c5e-b70c-95aaf721e12c',
-              'provider' => 'users',
-              'user_id' => 1,
-              'redirect' => 'http://localhost',
-              'personal_access_client' => 1,
-              'password_client' => 0,
-              'revoked' => 0,
-              'created_at' => now(),
-              'updated_at' => now()
-          ]);"    
+        CLIENT_ID=$(grep -oP 'client ID: \K\d+' passport_client_output.txt)
+        CLIENT_SECRET=$(grep -oP 'secret: \K\S+' passport_client_output.txt)
+        echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+        echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+    
+    - name: Update .env with Client ID and Secret
+      run: |
+        sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$CLIENT_ID/" .env
+        sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$CLIENT_SECRET/" .env
+      
     - name: Cache Configuration and Auto-Load
       run: | 
         php artisan cache:clear
@@ -125,8 +125,25 @@ jobs:
         REDIS_HOST: 127.0.0.1
         REDIS_PASSWORD: null
         REDIS_PORT: 6379
-        CLIENT_ID: 9dd80945-481f-4c5e-b70c-95aaf721e12c
-        CLIENT_SECRET: 228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4
+        CLIENT_ID: echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+        CLIENT_SECRET: echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
       run: |
         sudo apt-get install php8.3-xdebug
         php artisan test --coverage
+
+
+# - name: Manual client creation
+# run: |
+#     php artisan tinker --execute="DB::table('oauth_clients')->insert([
+#         'name' => 'Testing Personal Access Client',
+#         'secret' => '228PQCYbmhxi0W3jePyPoZatAQMmi1gOR5EBUev4',
+#         'id' => '9dd80945-481f-4c5e-b70c-95aaf721e12c',
+#         'provider' => 'users',
+#         'user_id' => 1,
+#         'redirect' => 'http://localhost',
+#         'personal_access_client' => 1,
+#         'password_client' => 0,
+#         'revoked' => 0,
+#         'created_at' => now(),
+#         'updated_at' => now()
+#     ]);"
