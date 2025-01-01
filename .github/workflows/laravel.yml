@@ -111,9 +111,11 @@ jobs:
       run: |
             sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$CLIENT_ID/" .env
             sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$CLIENT_SECRET/" .env  
-            
+            sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$CLIENT_ID/" .env.testing
+            sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$CLIENT_SECRET/" .env.testing 
+
     - name: Debug Updated .env
-      run: cat .env  # Check if the file contains the expected output.
+      run: cat .env.testing  # Check if the file contains the expected output.
       
     - name: Cache Configuration and Auto-Load
       run: | 
