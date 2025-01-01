@@ -94,8 +94,8 @@ jobs:
     
     - name: Extract Client ID and Secret
       run: |
-        CLIENT_ID=$(grep -oP 'client ID: \K\d+' passport_client_output.txt)
-        CLIENT_SECRET=$(grep -oP 'secret: \K\S+' passport_client_output.txt)
+        CLIENT_ID=$(grep -oP 'Client ID: \K\d+' passport_client_output.txt)
+        CLIENT_SECRET=$(grep -oP 'Client secret: \K\S+' passport_client_output.txt)
         echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
         echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
     
