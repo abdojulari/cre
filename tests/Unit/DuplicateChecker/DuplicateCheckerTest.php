@@ -35,7 +35,9 @@ beforeEach(function () {
         'client_id' => $clientId,
         'client_secret' => $clientSecret
     ]);
-    echo 'Response: ' . $response . PHP_EOL;
+    echo 'Response: ' . $response->getContent() . PHP_EOL; // For raw content
+    // Or if the response is in JSON format:
+    echo 'Response (JSON): ' . json_encode($response->json()) . PHP_EOL;
     echo 'Client ID: ' . $clientId . PHP_EOL;
     echo 'Client Secret: ' . $clientSecret . PHP_EOL;
     // Store the access token for reuse in the tests
@@ -73,9 +75,6 @@ it('can get a bearer token using /oauth/token endpoint', function () {
 
     // Extract the token from the response
     $this->token = $response->json('access_token');
-
-    var_dump('RESPONSE',  $response);
-    dd('TOKEN', $response);
     // Assert that the token is returned and is not null
     expect($this->token)->not()->toBeNull();
 });
