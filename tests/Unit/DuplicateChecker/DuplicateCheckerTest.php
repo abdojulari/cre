@@ -35,11 +35,8 @@ beforeEach(function () {
         'client_id' => $clientId,
         'client_secret' => $clientSecret
     ]);
-    echo 'Response: ' . $response->getContent() . PHP_EOL; // For raw content
-    // Or if the response is in JSON format:
-    echo 'Response (JSON): ' . json_encode($response->json()) . PHP_EOL;
-    echo 'Client ID: ' . $clientId . PHP_EOL;
-    echo 'Client Secret: ' . $clientSecret . PHP_EOL;
+ 
+    //echo 'Response (JSON): ' . json_encode($response->json()) . PHP_EOL;
     // Store the access token for reuse in the tests
     $this->token = $response->json('access_token');
 });
