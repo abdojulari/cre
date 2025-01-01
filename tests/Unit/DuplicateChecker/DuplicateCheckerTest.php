@@ -35,7 +35,9 @@ beforeEach(function () {
         'client_id' => $clientId,
         'client_secret' => $clientSecret
     ]);
-    
+    echo 'Response: ' . $response . PHP_EOL;
+    echo 'Client ID: ' . $clientId . PHP_EOL;
+    echo 'Client Secret: ' . $clientSecret . PHP_EOL;
     // Store the access token for reuse in the tests
     $this->token = $response->json('access_token');
 });
