@@ -93,19 +93,20 @@ jobs:
       run: php artisan passport:client --name="Testing Personal Access Client" --no-interaction > passport_client_output.txt         
       
     - name: Debug Passport Client Output
-      run: cat passport_client_output.txt
-    
+      run: cat passport_client_output.txt  # Check if the file contains the expected output.
+      
     - name: Extract Client ID and Secret
       run: |
-        CLIENT_ID=$(grep -oP 'Client ID: \K\d+' passport_client_output.txt)
-        CLIENT_SECRET=$(grep -oP 'Client secret: \K\S+' passport_client_output.txt)
+        CLIENT_ID=$(grep -oP 'Client ID\s+.*\K[^\s]+' passport_client_output.txt)
+        CLIENT_SECRET=$(grep -oP 'Client secret\s+.*\K[^\s]+' passport_client_output.txt)
         echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
         echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
-
-    - name: Update .env with Client ID and Secret
+      
+    - name: Debug Client ID and Secret
       run: |
-        sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$CLIENT_ID/" .env
-        sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$CLIENT_SECRET/" .env
+          echo "CLIENT_ID=$CLIENT_ID"
+          echo "CLIENT_SECRET=$CLIENT_SECRET"
+      
       
     - name: Cache Configuration and Auto-Load
       run: | 
