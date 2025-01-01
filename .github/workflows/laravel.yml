@@ -91,6 +91,9 @@ jobs:
 
     - name: Generate Client ID and Secret
       run: php artisan passport:client --name="Testing Personal Access Client" --no-interaction > passport_client_output.txt         
+      
+    - name: Debug Passport Client Output
+      run: cat passport_client_output.txt
     
     - name: Extract Client ID and Secret
       run: |
@@ -98,7 +101,7 @@ jobs:
         CLIENT_SECRET=$(grep -oP 'Client secret: \K\S+' passport_client_output.txt)
         echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
         echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
-    
+
     - name: Update .env with Client ID and Secret
       run: |
         sed -i "s/^CLIENT_ID=.*/CLIENT_ID=$CLIENT_ID/" .env
@@ -125,8 +128,8 @@ jobs:
         REDIS_HOST: 127.0.0.1
         REDIS_PASSWORD: null
         REDIS_PORT: 6379
-        CLIENT_ID: echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
-        CLIENT_SECRET: echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+        CLIENT_ID: ${{ secrets.CLIENT_ID }}
+        CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
       run: |
         sudo apt-get install php8.3-xdebug
         php artisan test --coverage
