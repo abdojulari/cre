@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace App\Console\Commands;
 
@@ -18,7 +18,7 @@ class ProcessILSDataCommand extends Command
 
     public function __construct(RedisService $redisService)
     {
-        parent::__construct();  
+        parent::__construct();
         $this->redisService = $redisService;
     }
 
@@ -41,20 +41,66 @@ class ProcessILSDataCommand extends Command
                 throw new \Exception('Failed to decode JSON output: ' . json_last_error_msg());
             }
 
-            $jsonData = json_encode($data);
-            if ($jsonData === false) {
-                throw new \Exception('Failed to encode JSON: ' . json_last_error_msg());
+            // Get the existing data from Redis
+            $existingData = $this->redisService->get('cre_registration_record');
+            
+            // Check if the existing data is a string (in case it's a JSON string)
+            if (is_string($existingData)) {
+                $existingData = json_decode($existingData, true) ?? [];  // Decode JSON if it's a string
+            } elseif (!is_array($existingData)) {
+                $existingData = [];  // Ensure it's an empty array if it's neither a string nor an array
+            }
+            // Loop through the $data and $existingData, use barcode as the key to find matching data, if found, update with $data value
+            foreach ($data as $newRecord) {
+                $updated = false;
+                foreach ($existingData as &$existingRecord) {
+                    // Compare by barcode
+                    if (isset($existingRecord['barcode']) && isset($newRecord['barcode']) && $existingRecord['barcode'] === $newRecord['barcode']) {
+                        // Update the existing record with the new data
+                        $existingRecord = array_merge($existingRecord, $newRecord);
+                        $updated = true;
+                        break;  // Once updated, no need to check further in the existing data
+                    }
+                }
+                // If no existing record was updated, add the new record
+                if (!$updated) {
+                    $existingData[] = $newRecord;
+                }
             }
 
-            // Save JSON to Redis
-            $existingData = $this->redisService->get('cre_registration_record');
-            if ($existingData === $jsonData) {
-                $this->info('Data is already up-to-date in Redis.');
+            // After processing the main $data, merge with the new data file
+            $path = storage_path('app/new-ils-user.json');
+            $newData = json_decode(file_get_contents($path), true) ?? [];
+            if (empty($newData)) {
+                $this->error('No new data found in the file.');
                 return;
             }
-            $this->redisService->set('cre_registration_record', $jsonData);
-            
-            $this->info('Data saved to Redis successfully!');
+
+            // Loop through the new data file and process similarly
+            foreach ($newData as $newRecord) {
+                $updated = false;
+                foreach ($existingData as &$existingRecord) {
+                    // Compare by barcode
+                    if (isset($existingRecord['barcode']) && isset($newRecord['barcode']) && $existingRecord['barcode'] === $newRecord['barcode']) {
+                        // Update the existing record with the new data
+                        $existingRecord = array_merge($existingRecord, $newRecord);
+                        $updated = true;
+                        break;  // Once updated, no need to check further in the existing data
+                    }
+                }
+                // If no existing record was updated, add the new record
+                if (!$updated) {
+                    $existingData[] = $newRecord;
+                }
+            }
+
+            // Save the final merged data to Redis
+            $this->redisService->set('cre_registration_record', json_encode($existingData));
+
+            $this->info('Data merged and saved to Redis successfully!');
+
+            // Clear the new data file after processing
+            file_put_contents($path, '');
 
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());

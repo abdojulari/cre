@@ -11,4 +11,6 @@ return [
     'endpoint' => env('ENDPOINT', 'endpoint'),
     'patron_endpoint' => env('PATRON_ENDPOINT', 'patron_endpoint'),
     'last_barcode' => env('LAST_BARCODE', 'last_barcode'),
+    'barcode_url' => env('BARCODE_URL', 'barcode_url'),
+    'user_auth' => env('USER_AUTH', 'user_auth'),
 ];

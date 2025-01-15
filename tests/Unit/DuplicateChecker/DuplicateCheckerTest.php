@@ -6,6 +6,8 @@ use App\Services\RedisService;
 use App\Services\PatronDataTransformer;
 use App\Services\AccuracyDataService;
 use Illuminate\Support\Facades\Redis;
+use App\Services\ExternalApiService;
+use App\Services\DuplicateCheckerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\SendWelcomeEmail;
@@ -19,11 +21,15 @@ beforeEach(function () {
     $this->transformer = Mockery::mock(PatronDataTransformer::class);
     $this->redisService = Mockery::mock(RedisService::class);
     $this->accuracyDataService = Mockery::mock(AccuracyDataService::class);
+    $this->externalApiService = Mockery::mock(ExternalApiService::class);
+    $this->duplicateCheckerService = Mockery::mock(DuplicateCheckerService::class);
     
     $this->controller = new DuplicateCheckerController(
         $this->transformer,
         $this->redisService,
-        $this->accuracyDataService
+        $this->accuracyDataService,
+        $this->externalApiService,
+        $this->duplicateCheckerService
     );
 
     // Obtain the token once before the tests run
@@ -83,42 +89,6 @@ it('checks if the endpoint /duplicates exists', function () {
       ])->postJson('/api/duplicates',[]);
 
     $response->assertStatus(422);
-});
-
-it('detects duplicate records', function () {
-    $existingData = [
-        [
-            'firstname' => 'John',
-            'lastname' => 'Doe',
-            'email' => 'john@example.com',
-            'phone' => '1234567890',
-            'dateofbirth' => '1990-01-01',
-            'address' => '123 Main St'
-        ]
-    ];
-    
-    $this->redisService
-        ->shouldReceive('get')
-        ->with('cre_registration_record')
-        ->andReturn(json_encode($existingData));
-
-    $request = Request::create('/store', 'POST', [
-        'firstname' => 'John',
-        'lastname' => 'Doe',
-        'email' => 'john@example.com',
-        'phone' => '1234567890',
-        'dateofbirth' => '1990-01-01',
-        'address' => '123 Main St',
-        'postalcode' => '12345',
-        'city' => 'Test City',
-        'barcode' => '123456789'
-    ]);
-
-    $response = $this->controller->store($request);
-    
-    expect($response->status())->toBe(409)
-        ->and(json_decode($response->content(), true)['message'])
-        ->toContain('Duplicate record found');
 });
 
 it('successfully stores new record', function () {
@@ -182,6 +152,10 @@ it('handles ILS API failure', function () {
         config('cre.base_url_dev') . '*' => Http::response(['error' => 'API Error'], 500),
     ]);
 
+    // Mock duplicateCheckerService
+    $this->duplicateCheckerService->shouldReceive('retrieveDuplicateUsingCache')
+        ->andReturn(false);
+
     $request = new Request([
         'firstname' => 'Jane',
         'lastname' => 'Smith',
@@ -200,17 +174,25 @@ it('handles ILS API failure', function () {
    
 });
 
-it('handles Redis data properly in lpass method', function () {
-    $faker = Faker\Factory::create();
-    $this->redisService->shouldReceive('get')
-        ->with('cre_registration_record')
-        ->andReturn(json_encode([]));
+it('detects duplicate record', function () {
+    // Fake the filesystem
+    Storage::fake('local');
 
-    // Mock transformer
-    $this->transformer->shouldReceive('transform')
+    // Create an empty json file that your controller expects
+    Storage::put('test_duplicates.json', '[]');
+     
+    Mail::fake();
+    $faker = Faker\Factory::create();
+
+    $this->redisService
+        ->shouldReceive('get')
+        ->with('cre_registration_record')
+        ->andReturn('[]');
+
+    $this->transformer
+        ->shouldReceive('transform')
         ->andReturn(['transformed' => 'data']);
 
-    // Mock HTTP calls
     Http::fake([
         config('cre.base_url_dev') . config('cre.endpoint') => Http::response(['sessionToken' => 'fake-token'], 200),
         config('cre.base_url_dev') . config('cre.patron_endpoint') => Http::response(['success' => true], 200),
@@ -218,21 +200,20 @@ it('handles Redis data properly in lpass method', function () {
 
     $response = $this->withHeaders([
         'Authorization' => 'Bearer '.$this->token, 
-        ])->postJson('/api/lpass',[
-            'firstname' => $faker->firstName,
-            'lastname' => $faker->lastName,
-            'middlename' => $faker->firstName,
-            'email' => $faker->unique()->safeEmail,
-            'phone' => $faker->numerify('##########'),
-            'dateofbirth' => $faker->date('Y-m-d', '-18 years'), 
-            'address' => $faker->streetAddress,
-            'postalcode' => $faker->postcode,
-            'city' => $faker->city,
-            'province' => $faker->state,
-            'barcode' => $faker->unique()->numerify('#########')
+        ])->postJson('/api/duplicates',[
+            'firstname' => 'Hunkend',
+            'lastname' => 'Doacche',
+            'dateofbirth' => '2089-05-14',
+            'email' => 'hunkend@example.com',
+            'phone' => '7806455102',
+            'address' => '123 Stubborn Goat St',
+            'postalcode' => '980931',
+            'city' => 'Edmonton',
+            'barcode' => '22211099393'
         ]);
     
-    expect($response->status())->toBe(200);
-    expect(json_decode($response->content(), true)['message'])
-        ->toBe('New record created in Redis');
+    expect($response->status())->toBe(409)
+        ->and(json_decode($response->content(), true)['message'])
+        ->toContain('Duplicate record found');
+    Storage::disk('local')->assertExists('test_duplicates.json');
 });

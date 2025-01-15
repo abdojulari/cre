@@ -12,7 +12,7 @@ class PatronDataTransformer
      * @param array $data
      * @return array
      */
-    public function transform(array $data): array
+    public function transform(array $data, string $product): array
     {
         // Initialize the categories and remove null values
         $categories = [];
@@ -56,6 +56,7 @@ class PatronDataTransformer
         // Prepare the main array with required fields
         $transformedData = [
             '@resource' => '/user/patron',
+            '@key' => $product === 'LPASS' ? $data['key'] ?? null : null,
             'barcode' => $data['barcode'] ?? null,
             'lastName' => $data['lastname'] ?? null,
             'firstName' => $data['firstname'] ?? null,
@@ -67,10 +68,10 @@ class PatronDataTransformer
             ],
             'profile' => [
                 '@resource' => '/policy/userProfile',
-                '@key' => $data['profile'] ?? null,
+                '@key' => $data['profile'] ?? 'EPL_SELF',
             ],
             'pin' => $data['password'] ?? null,
-            'privilegeExpiresDate' => '2030-10-03',
+            'privilegeExpiresDate' => $data['expirydate'] ?? null,
             'birthDate' => $data['dateofbirth'] ?? null,
             'address1' => $this->transformAddress($data),
         ];
@@ -149,4 +150,48 @@ class PatronDataTransformer
             ]
         ];
     }
+
+    public function transformUserData(array $input): array 
+    {
+        // Initialize the output array
+        $transformedData = [];
+    
+        // Ensure that input is an array
+        if (empty($input)) {
+            return $transformedData; // Return an empty array if input is empty
+        }
+    
+        // Create a single object with the required fields
+        $userObject = [
+            'firstname' => $input['firstName'] ?? null,
+            'lastname' => $input['lastName'] ?? null,
+            'middlename' => $input['middleName'] ?: null, // Convert empty string to null
+            'dateofbirth' => $input['birthDate'] ?? null,
+            'profile' => $input['profile']['@key'] ?? null,
+            'city' => null, // Not present in input
+            'barcode' => $input['barcode'] ?? null,
+            'category5' => null // Not present in input
+        ];
+    
+        // Add the object to the array
+        $transformedData[] = $userObject;
+    
+        return $transformedData;
+    }
+    
+    public function dataHasChanged(array $existingData, array $newData) {
+        $fieldsToCompare = [
+            'firstname', 'lastname', 'email', 'phone', 'address', 
+            'postalcode', 'city'
+        ];
+    
+        foreach ($fieldsToCompare as $field) {
+            if (($existingData[$field] ?? null) !== ($newData[$field] ?? null)) {
+                return true;
+            }
+        }
+    
+        return false;
+    }
+    
 }
