@@ -18,7 +18,8 @@ class BarcodeGeneratorController extends Controller
     public function create()
     {
         // Define the constant prefix for the barcode
-        $constantPrefix = config('cre.last_barcode'); // '212219' create an environment variable for this
+        $constantPrefix = config('cre.barcode_prefix'); // '212219' create an environment variable for this
+        $startBarcode = config('cre.start_barcode');
         // Get the last generated barcode from Redis
         $lastBarcode = $this->redisService->get('barcode');
         if ($lastBarcode) {
@@ -27,7 +28,7 @@ class BarcodeGeneratorController extends Controller
             $newNumericPart = $lastNumericPart + 1;
         } else {
             // Initialize the first numeric part (starting value)
-            $newNumericPart = 30376355; // Starting value for the 9-digit number
+            $newNumericPart = $startBarcode; // Starting value for the 9-digit number
         }
 
         // Ensure the new numeric part is 9 digits long

@@ -74,12 +74,10 @@ return [
         ],
 
         'slack' => [
-            'driver' => 'slack',
+            'driver' => 'custom',
+            'via' => \App\Logging\SlackLogger::class,
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
-            'username' => env('LOG_SLACK_USERNAME', 'Laravel Log'),
-            'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'replace_placeholders' => true,
         ],
 
         'papertrail' => [

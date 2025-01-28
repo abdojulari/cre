@@ -14,7 +14,8 @@ beforeEach(function () {
     app()->instance(RedisService::class, $this->redisMock);
     
     // Set the config value for the constant prefix
-    config(['cre.last_barcode' => '212219']);
+    config(['cre.start_barcode' => '30376355']);
+    config(['cre.barcode_prefix' => '212219']);
 
     // Obtain the token once before the tests run
     $clientId = env('CLIENT_ID');

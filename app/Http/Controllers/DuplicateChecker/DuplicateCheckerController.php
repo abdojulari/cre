@@ -84,6 +84,11 @@ class DuplicateCheckerController extends Controller
         // Fuzzy logic check
         $duplicate = $this->duplicateCheckerService->retrieveDuplicateUsingCache($data, $redis);
         if ($duplicate) {
+            Log::channel('slack')->alert('Duplicate record found with fuzzy logic', [
+                'duplicate' => $duplicate,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
             return response()->json([
                 'message' => 'Duplicate record found with fuzzy logic.',
                 'duplicate' => $duplicate
@@ -111,10 +116,21 @@ class DuplicateCheckerController extends Controller
             $this->sendWelcomeEmail($data);
 
             Log::info('patron', $transformedData);
+            // With context
+            Log::channel('slack')->info('Patron successfully added', [
+                'patron' => $transformedData,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
             return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
         } catch (\Exception $e) {
             // If there's an error with the ILS API call, handle the exception and prevent Redis write
             Log::error('Error posting to ILS API: ' . $e->getMessage());
+            Log::channel('slack')->error('Error posting to ILS API', [
+                'error' => $e->getMessage(),
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
             return response()->json(['message' => 'Error posting to ILS API'], 500);
         }
 
@@ -214,6 +230,12 @@ class DuplicateCheckerController extends Controller
                                 return response()->json(['message' => 'Record updated to ILS']);
                             } catch (\Exception $e) {
                                 Log::error('Error updating ILS: ' . $e->getMessage());
+                                Log::channel('slack')->error('Error updating ILS - LPASS', [
+                                    'Erro Message' => $e->getMessage(),
+                                    'ip' => request()->ip(),
+                                    'trace' => $e->getTraceAsString(),
+                                    'user_agent' => request()->userAgent()
+                                ]);
                                 return response()->json(['message' => 'Error updating ILS'], 500);
                             }
                         } else {
@@ -242,6 +264,12 @@ class DuplicateCheckerController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            Log::channel('slack')->error('Redis operation failed - LPASS', [
+                'error' => $e->getMessage(),
+                'ip' => request()->ip(),
+                'trace' => $e->getTraceAsString(),
+                'user_agent' => request()->userAgent()
+            ]);
             return response()->json(['error' => 'Failed to process request'], 500);
         }
     }
@@ -265,6 +293,11 @@ class DuplicateCheckerController extends Controller
             ));
         } catch (\Exception $e) {
             Log::error('Error sending welcome email: ' . $e->getMessage());
+            Log::channel('slack')->error('Error sending welcome email', [
+                'error' => $e->getMessage(),
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
         }
     }
     

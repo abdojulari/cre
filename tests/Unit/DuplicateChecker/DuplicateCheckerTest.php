@@ -111,8 +111,8 @@ it('successfully stores new record', function () {
         ->andReturn(['transformed' => 'data']);
 
     Http::fake([
-        config('cre.base_url_dev') . config('cre.endpoint') => Http::response(['sessionToken' => 'fake-token'], 200),
-        config('cre.base_url_dev') . config('cre.patron_endpoint') => Http::response(['success' => true], 200),
+        config('cre.ils_base_url') . config('cre.endpoint') => Http::response(['sessionToken' => 'fake-token'], 200),
+        config('cre.ils_base_url') . config('cre.patron_endpoint') => Http::response(['success' => true], 200),
     ]);
 
     $response = $this->withHeaders([
@@ -149,7 +149,7 @@ it('handles ILS API failure', function () {
 
     // Mock HTTP calls to fail
     Http::fake([
-        config('cre.base_url_dev') . '*' => Http::response(['error' => 'API Error'], 500),
+        config('cre.ils_base_url') . '*' => Http::response(['error' => 'API Error'], 500),
     ]);
 
     // Mock duplicateCheckerService
@@ -194,8 +194,8 @@ it('detects duplicate record', function () {
         ->andReturn(['transformed' => 'data']);
 
     Http::fake([
-        config('cre.base_url_dev') . config('cre.endpoint') => Http::response(['sessionToken' => 'fake-token'], 200),
-        config('cre.base_url_dev') . config('cre.patron_endpoint') => Http::response(['success' => true], 200),
+        config('cre.ils_base_url') . config('cre.endpoint') => Http::response(['sessionToken' => 'fake-token'], 200),
+        config('cre.ils_base_url') . config('cre.patron_endpoint') => Http::response(['success' => true], 200),
     ]);
 
     $response = $this->withHeaders([
@@ -217,3 +217,23 @@ it('detects duplicate record', function () {
         ->toContain('Duplicate record found');
     Storage::disk('local')->assertExists('test_duplicates.json');
 });
+
+it('handles invalid input gracefully', function () {
+    $response = $this->withHeaders([
+        'Authorization' => 'Bearer '.$this->token,
+    ])->postJson('/api/duplicates', [
+        'firstname' => '',
+        'lastname' => '',
+        'dateofbirth' => '',
+        'email' => '',
+        'phone' => '',
+        'address' => '',
+        'postalcode' => '',
+        'city' => '',
+        'barcode' => ''
+    ]);
+
+    $response->assertStatus(422); 
+    expect($response->json('errors'))->not()->toBeEmpty();
+});
+

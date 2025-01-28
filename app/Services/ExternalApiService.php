@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 class ExternalApiService 
 {
     public function getSessionToken() {
-        $url = config('cre.base_url_dev') . config('cre.endpoint');
+        $url = config('cre.ils_base_url') . config('cre.endpoint');
         $body = [
             'login' => config('cre.symws_user'),
             'password' => config('cre.symws_pass')
@@ -28,7 +28,7 @@ class ExternalApiService
     public function postToILS($data) {
         //Call the ILS API endpoint to save the data
         $sessionToken = $this->getSessionToken();
-        $url = config('cre.base_url_dev') . config('cre.patron_endpoint');
+        $url = config('cre.ils_base_url') . config('cre.patron_endpoint');
         $response = Http::withHeaders([
             'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
             'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',
@@ -49,7 +49,7 @@ class ExternalApiService
     public function retrieveILSData($data){
         $sessionToken = $this->getSessionToken();
         $barcode = $data['barcode'];
-        $barcode_url = config('cre.base_url_dev') . config('cre.barcode_url');
+        $barcode_url = config('cre.ils_base_url') . config('cre.barcode_url');
        
         try {
             $response = Http::withHeaders([
@@ -71,7 +71,7 @@ class ExternalApiService
         $sessionToken = $this->getSessionToken();
         $key = $this->retrieveILSData($data)['@key'];
         Log::info('Barcode response', ['key' => $key]);
-        $url = config('cre.base_url_dev') . config('cre.patron_endpoint') .'/key/'.$key;
+        $url = config('cre.ils_base_url') . config('cre.patron_endpoint') .'/key/'.$key;
         try {
             
             $response = Http::withHeaders([
@@ -93,7 +93,7 @@ class ExternalApiService
 
     public function userAuth($data) {
         $sessionToken = $this->getSessionToken();
-        $url = config('cre.base_url_dev') . config('cre.user_auth');
+        $url = config('cre.ils_base_url') . config('cre.user_auth');
         $data = [
             'barcode' => $data['barcode'],
             'password' => $data['password']

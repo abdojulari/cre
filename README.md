@@ -155,3 +155,18 @@ Generate client_id and client_secret for the test environment
 ```
 php artisan passport:client --env=testing
 ```
+
+
+**Logging**
+
+```// Log different severity levels
+Log::channel('slack')->emergency('System is down!');
+Log::channel('slack')->alert('Database connection failed');
+Log::channel('slack')->critical('Critical system error');
+Log::channel('slack')->error('Application error');
+Log::channel('slack')->warning('Something might be wrong');
+Log::channel('slack')->notice('Normal but significant event');
+Log::channel('slack')->info('Interesting event');
+Log::channel('slack')->debug('Detailed debug information');
+
+```
