@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Laravel\Passport\Http\Middleware\CheckClientCredentials;
 use App\Http\Middleware\CustomSecurity;
+use App\Http\Middleware\SanctumAuth;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'client' => CheckClientCredentials::class,
             'custom-security' => CustomSecurity::class,
+            'sanctum-auth' => SanctumAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
