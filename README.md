@@ -115,6 +115,7 @@ In this case, the fields that match perfectly will strongly drive the final scor
    ```
 3. **Migration and Seeder** 
    - Run the following to run migration `php artisan migrate`
+   - To check the status of migration `php artisan migrate:status`
    - Run the following to seed `php artisan db:seed`
    - To run specific class `php artisan db:seed --class=UserSeeder`
 
