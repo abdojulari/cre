@@ -45,7 +45,7 @@ class DuplicateCheckerService
             // Case 3: Both are adults with same lastname
             else {
                 $fieldWeights = [
-                    'firstname' => 1.0,
+                    'firstname' => 3.0,
                     'lastname' => 1.0,
                     'phone' => 3.0,
                     'email' => 3.0,
