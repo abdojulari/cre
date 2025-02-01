@@ -17,6 +17,19 @@ class DuplicateCheckerService
         return null;
     }
 
+    public function normalizeAddress($address) {
+        // Convert to lowercase
+        $normalized = strtolower($address);
+        
+        // Remove punctuation
+        $normalized = preg_replace('/[^\w\s]/', '', $normalized);
+        
+        // Standardize common abbreviations
+        $normalized = str_replace(['avenue', 'ave', 'nw'], ['ave', 'ave', 'nw'], $normalized);
+        
+        return $normalized;
+    }
+
     public function isDuplicate($record1, $record2) {
         // Age calculation
         $dob1 = new \DateTime($record1['dateofbirth']);
@@ -26,6 +39,12 @@ class DuplicateCheckerService
     
         $isMinor1 = $age1 < 18;
         $isMinor2 = $age2 < 18;
+    
+        // Normalize addresses before any comparison
+        if (isset($record1['address']) && isset($record2['address'])) {
+            $record1['address'] = $this->normalizeAddress($record1['address']);
+            $record2['address'] = $this->normalizeAddress($record2['address']);
+        }
     
         // If they share the same lastname
         if (strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
@@ -45,7 +64,7 @@ class DuplicateCheckerService
             // Case 3: Both are adults with same lastname
             else {
                 $fieldWeights = [
-                    'firstname' => 3.0,
+                    'firstname' => 1.0,
                     'lastname' => 1.0,
                     'phone' => 3.0,
                     'email' => 3.0,
@@ -58,7 +77,7 @@ class DuplicateCheckerService
         else {
             // For different lastnames, require unique contact details
             if (
-                strtolower($record1['email']) === strtolower($record2['email']) ||
+                strtolower($record1['email']) === strtolower($record2['email']) &&
                 strtolower($record1['phone']) === strtolower($record2['phone'])
             ) {
                 return true; // Consider it a duplicate if contact details match
@@ -104,5 +123,40 @@ class DuplicateCheckerService
         
         // Apply the weight to the similarity score
         return $normalizedSimilarity * $weight;
+    }
+
+    public function checkCareofRegistrationLimit($redisService, $careofName, $phone, $email) {
+        // Retrieve the record from Redis using the key "cre_registration_record"
+        $record = $redisService->get('cre_registration_record');
+        
+        // Convert to JSON if not already converted
+        $data = is_string($record) ? json_decode($record, true) : $record;
+        
+        if (!is_array($data)) {
+            Log::error('Invalid data format retrieved from Redis.');
+            return false;
+        }
+        
+        // Count the number of occurrences of the specific "careof" name, phone, and email
+        $careofCount = 0;
+        foreach ($data as $entry) {
+            if (
+                isset($entry['careof'], $entry['phone'], $entry['email']) &&
+                strtolower($entry['careof']) === strtolower($careofName) &&
+                strtolower($entry['phone']) === strtolower($phone) &&
+                strtolower($entry['email']) === strtolower($email)
+            ) {
+                $careofCount++;
+            }
+        }
+        
+        // Check if the count exceeds the maximum allowed
+        $maxAllowed = 10;
+        if ($careofCount >= $maxAllowed) {
+            Log::info("Registration limit reached for careof: $careofName with phone: $phone and email: $email");
+            return false; // Cannot register more minors
+        }
+        
+        return true; // Can register more minors
     }
 }
