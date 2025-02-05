@@ -34,7 +34,39 @@ class AppServiceProvider extends ServiceProvider
         Passport::personalAccessTokensExpireIn(now()->addMonths(6));
         
         RateLimiter::for('duplicates', function ($request) {
-            return Limit::perHour(4)->by($request->ip());
+            $ip = $request->ip();
+            if ($this->isExcludedSubnet($ip)) {
+                return Limit::none();
+            }
+            return Limit::perHour(4)->by($ip);
         });
+    }
+
+    /**
+     * Determine if the given IP is within the excluded subnets.
+     */
+    protected function isExcludedSubnet($ip): bool
+    {
+        $excludedSubnets = [
+            '10.12.0.0/20',
+            '10.12.28.0/24',
+        ];
+
+        foreach ($excludedSubnets as $subnet) {
+            if ($this->ipInSubnet($ip, $subnet)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if an IP is within a given subnet.
+     */
+    protected function ipInSubnet($ip, $subnet): bool
+    {
+        list($subnet, $mask) = explode('/', $subnet);
+        return (ip2long($ip) & ~((1 << (32 - $mask)) - 1)) == ip2long($subnet);
     }
 }

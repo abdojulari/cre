@@ -10,7 +10,7 @@ use App\Http\Controllers\AuthController;
 
 Route::post('/duplicates', [DuplicateCheckerController::class, 'store'])->middleware(['client', 'custom-security', 'throttle:duplicates', 'sanctum-auth']);
 Route::post('/lpass', [DuplicateCheckerController::class, 'lpass'])->middleware('client');
-Route::get('/barcode', [BarcodeGeneratorController::class, 'create']);
+Route::get('/barcode', [BarcodeGeneratorController::class, 'create'])->middleware('client');
 Route::get('/accuracy', [DuplicateCheckerController::class, 'evaluateDuplicates']);
 Route::post('/customer-auth', [UserAuthenticationController::class, 'authenticateUser'])->middleware('client');
 Route::post('/login', [AuthController::class, 'login']);
