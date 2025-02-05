@@ -116,12 +116,6 @@ class DuplicateCheckerController extends Controller
             $this->sendWelcomeEmail($data);
 
             Log::info('patron', $transformedData);
-            // With context
-            Log::channel('slack')->info('Patron successfully added', [
-                'patron' => $transformedData,
-                'ip' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
             return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
         } catch (\Exception $e) {
             // If there's an error with the ILS API call, handle the exception and prevent Redis write
