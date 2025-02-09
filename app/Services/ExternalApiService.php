@@ -29,6 +29,7 @@ class ExternalApiService
         //Call the ILS API endpoint to save the data
         $sessionToken = $this->getSessionToken();
         $url = config('cre.ils_base_url') . config('cre.patron_endpoint');
+        try {
         $response = Http::withHeaders([
             'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
             'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',
@@ -38,11 +39,16 @@ class ExternalApiService
             'SD-Prompt-Return' => 'USER_PRIVILEGE_OVRCD/Y'
         ])->post($url, $data);
         if ($response->successful()) {
-            Log::info('ILS API response', $response->json());
             return $response->json();
         }
-        Log::info('FAILURE', $response->json());
-        return response()->json(['message' => 'Error posting to ILS API'], 500);
+        } catch (\Exception $e) {
+            Log::error('Error posting to ILS API: ' . $e->getMessage());
+            Log::channel('slack')->critical('Error Posting to ILS API', [
+                'error' => $e->getMessage(),
+                'data' => $data
+            ]);
+            return response()->json(['message' => 'Error posting to ILS API'], 500);
+        }
     }
 
     // retrieve data from ILS API
@@ -70,10 +76,8 @@ class ExternalApiService
     public function updateToILS($data) {
         $sessionToken = $this->getSessionToken();
         $key = $this->retrieveILSData($data)['@key'];
-        Log::info('Barcode response', ['key' => $key]);
         $url = config('cre.ils_base_url') . config('cre.patron_endpoint') .'/key/'.$key;
-        try {
-            
+        try {          
             $response = Http::withHeaders([
                 'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
                 'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',

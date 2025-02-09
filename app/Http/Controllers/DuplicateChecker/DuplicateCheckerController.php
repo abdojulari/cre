@@ -114,8 +114,6 @@ class DuplicateCheckerController extends Controller
 
             // Send welcome email
             $this->sendWelcomeEmail($data);
-
-            Log::info('patron', $transformedData);
             return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
         } catch (\Exception $e) {
             // If there's an error with the ILS API call, handle the exception and prevent Redis write
