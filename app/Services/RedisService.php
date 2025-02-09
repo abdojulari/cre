@@ -46,7 +46,7 @@ class RedisService
      */
     public function set(string $key, $value, int $expireInSeconds = null)
     {
-        try {
+        try { 
             $value = json_encode($value);  // Ensure it's stored as JSON
             $result = $this->redis->set($key, $value);
             if ($expireInSeconds) {

@@ -14,4 +14,6 @@ return [
     'barcode_prefix' => env('BARCODE_PREFIX', 'barcode_prefix'),
     'barcode_url' => env('BARCODE_URL', 'barcode_url'),
     'user_auth' => env('USER_AUTH', 'user_auth'),
+    'rate_limit' => env('RATE_LIMIT', 'rate_limit'),
+    'custom_security_token' => env('CUSTOM_SECURITY_TOKEN', 'custom_security_token'),
 ];

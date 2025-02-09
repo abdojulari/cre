@@ -30,6 +30,84 @@ class DuplicateCheckerService
         return $normalized;
     }
 
+    // public function isDuplicate($record1, $record2) {
+    //     // Age calculation
+    //     $dob1 = new \DateTime($record1['dateofbirth']);
+    //     $dob2 = new \DateTime($record2['dateofbirth']);
+    //     $age1 = $dob1->diff(new \DateTime())->y;
+    //     $age2 = $dob2->diff(new \DateTime())->y;
+    
+    //     $isMinor1 = $age1 < 18;
+    //     $isMinor2 = $age2 < 18;
+    
+    //     // Normalize addresses before any comparison
+    //     if (isset($record1['address']) && isset($record2['address'])) {
+    //         $record1['address'] = $this->normalizeAddress($record1['address']);
+    //         $record2['address'] = $this->normalizeAddress($record2['address']);
+    //     }
+    
+    //     // If they share the same lastname
+    //     if (strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
+    //         // Case 1: Both are minors with same lastname
+    //         if ($isMinor1 && $isMinor2) {
+    //             // Only compare firstname and DOB
+    //             $fieldWeights = [
+    //                 'firstname' => 1.0,
+    //                 'dateofbirth' => 1.0
+    //             ];
+    //         }
+    //         // Case 2: One is minor, one is adult (potential parent-child)
+    //         else if ($isMinor1 xor $isMinor2) {
+    //             // Allow shared contact details for parent-child
+    //             return false;  // Not a duplicate
+    //         }
+    //         // Case 3: Both are adults with same lastname
+    //         else {
+    //             $fieldWeights = [
+    //                 'firstname' => 1.0,
+    //                 'lastname' => 1.0,
+    //                 'phone' => 3.0,
+    //                 'email' => 3.0,
+    //                 'dateofbirth' => 1.0,
+    //                 'address' => 3.0
+    //             ];
+    //         }
+    //     }
+    //     // Different lastnames
+    //     else {
+    //         // For different lastnames, require unique contact details
+    //         if (
+    //             strtolower($record1['email']) === strtolower($record2['email']) &&
+    //             strtolower($record1['phone']) === strtolower($record2['phone'])
+    //         ) {
+    //             return true; // Consider it a duplicate if contact details match
+    //         }
+            
+    //         $fieldWeights = [
+    //             'firstname' => 1.0,
+    //             'lastname' => 1.0,
+    //             'dateofbirth' => 1.0,
+    //             'address' => 1.0
+    //         ];
+    //     }
+    
+    //     $totalSimilarityScore = 0;
+    //     $totalWeight = 0;
+    
+    //     foreach ($fieldWeights as $field => $weight) {
+    //         if (!isset($record1[$field]) || !isset($record2[$field])) {
+    //             continue;
+    //         }
+    //         $similarity = $this->similarity($record1[$field], $record2[$field], $weight);
+    //         $totalSimilarityScore += $similarity;
+    //         $totalWeight += $weight;
+    //     }
+    
+    //     $averageSimilarity = $totalWeight > 0 ? $totalSimilarityScore / $totalWeight : 0;
+        
+    //     return $averageSimilarity > 75;
+    // }
+
     public function isDuplicate($record1, $record2) {
         // Age calculation
         $dob1 = new \DateTime($record1['dateofbirth']);
@@ -40,54 +118,35 @@ class DuplicateCheckerService
         $isMinor1 = $age1 < 18;
         $isMinor2 = $age2 < 18;
     
-        // Normalize addresses before any comparison
+        // Normalize addresses before comparison
         if (isset($record1['address']) && isset($record2['address'])) {
             $record1['address'] = $this->normalizeAddress($record1['address']);
             $record2['address'] = $this->normalizeAddress($record2['address']);
         }
     
-        // If they share the same lastname
-        if (strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
-            // Case 1: Both are minors with same lastname
-            if ($isMinor1 && $isMinor2) {
-                // Only compare firstname and DOB
-                $fieldWeights = [
-                    'firstname' => 1.0,
-                    'dateofbirth' => 1.0
-                ];
-            }
-            // Case 2: One is minor, one is adult (potential parent-child)
-            else if ($isMinor1 xor $isMinor2) {
-                // Allow shared contact details for parent-child
-                return false;  // Not a duplicate
-            }
-            // Case 3: Both are adults with same lastname
-            else {
-                $fieldWeights = [
-                    'firstname' => 1.0,
-                    'lastname' => 1.0,
-                    'phone' => 3.0,
-                    'email' => 3.0,
-                    'dateofbirth' => 1.0,
-                    'address' => 3.0
-                ];
-            }
-        }
-        // Different lastnames
-        else {
-            // For different lastnames, require unique contact details
-            if (
-                strtolower($record1['email']) === strtolower($record2['email']) &&
-                strtolower($record1['phone']) === strtolower($record2['phone'])
-            ) {
-                return true; // Consider it a duplicate if contact details match
-            }
-            
+        // If both are minors, check identifying information
+        if ($isMinor1 && $isMinor2) {
             $fieldWeights = [
                 'firstname' => 1.0,
                 'lastname' => 1.0,
+                'dateofbirth' => 1.0
+            ];
+        }
+        // If one is minor and one is adult, focus heavily on date of birth
+        else if ($isMinor1 xor $isMinor2) {
+            $fieldWeights = [
+                'dateofbirth' => 3.0  // Higher weight to ensure age difference is significant
+            ];
+        }
+        // Both are adults - use all fields with higher weight on contact details
+        else {
+            $fieldWeights = [
+                'firstname' => 1.0,
+                'lastname' => 1.0,
+                'phone' => 3.0,
+                'email' => 3.0,
                 'dateofbirth' => 1.0,
-                'address' => 1.0
+                'address' => 3.0
             ];
         }
     
@@ -107,7 +166,7 @@ class DuplicateCheckerService
         
         return $averageSimilarity > 75;
     }
-
+    
     public function similarity($str1, $str2, $weight = 1) {
         // Calculate Levenshtein distance
         $levenshtein = levenshtein($str1, $str2);

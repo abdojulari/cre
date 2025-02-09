@@ -32,13 +32,14 @@ class AppServiceProvider extends ServiceProvider
         Passport::tokensExpireIn(now()->addDays(15));
         Passport::refreshTokensExpireIn(now()->addDays(30));
         Passport::personalAccessTokensExpireIn(now()->addMonths(6));
-        
+
         RateLimiter::for('duplicates', function ($request) {
             $ip = $request->ip();
+            $rateLimit = config('cre.rate_limit');
             if ($this->isExcludedSubnet($ip)) {
                 return Limit::none();
             }
-            return Limit::perHour(4)->by($ip);
+            return Limit::perHour($rateLimit)->by($ip);
         });
     }
 

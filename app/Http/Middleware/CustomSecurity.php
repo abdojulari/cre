@@ -10,8 +10,8 @@
    {
        public function handle(Request $request, Closure $next)
        {
-           $token = env('CUSTOM_SECURITY_TOKEN');
-
+           $token = config('cre.custom_security_token');
+           dd(env('CUSTOM_SECURITY_TOKEN'));
            if ($request->header('X-CRE-Token') !== $token) {
                return response('Unauthorized.', 401);
            }

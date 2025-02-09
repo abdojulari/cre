@@ -171,3 +171,6 @@ Log::channel('slack')->info('Interesting event');
 Log::channel('slack')->debug('Detailed debug information');
 
 ```
+
+### Documentation 
+[Check Duplicate Logic](https://epldotca-my.sharepoint.com/:w:/r/personal/abdul_ojulari_epl_ca/_layouts/15/Doc.aspx?sourcedoc=%7BFF3E42D6-702F-4374-8446-C5434C6EF0BF%7D&file=DUPLICATE%20CHECKThe%20logic.docx&wdLOR=c81D8B81D-8562-1348-B0F1-E796ABDF811B&fromShare=true&action=default&mobileredirect=true)
