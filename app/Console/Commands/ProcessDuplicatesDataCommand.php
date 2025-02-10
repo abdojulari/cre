@@ -33,7 +33,7 @@ class ProcessDuplicatesDataCommand extends Command
             $data = json_decode(file_get_contents($path), true);
             $this->redisService->set('duplicates', json_encode($data));
             Log::channel('slack')->alert('Successfully saved on Redis!', [
-                'duplicate' => $duplicate,
+                'Data' => $data,
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);

@@ -17,18 +17,18 @@ class DuplicateCheckerService
         return null;
     }
 
-    public function normalizeAddress($address) {
-        // Convert to lowercase
-        $normalized = strtolower($address);
+    // public function normalizeAddress($address) {
+    //     // Convert to lowercase
+    //     $normalized = strtolower($address);
         
-        // Remove punctuation
-        $normalized = preg_replace('/[^\w\s]/', '', $normalized);
+    //     // Remove punctuation
+    //     $normalized = preg_replace('/[^\w\s]/', '', $normalized);
         
-        // Standardize common abbreviations
-        $normalized = str_replace(['avenue', 'ave', 'nw'], ['ave', 'ave', 'nw'], $normalized);
+    //     // Standardize common abbreviations
+    //     $normalized = str_replace(['avenue', 'ave', 'nw'], ['ave', 'ave', 'nw'], $normalized);
         
-        return $normalized;
-    }
+    //     return $normalized;
+    // }
 
     // public function isDuplicate($record1, $record2) {
     //     // Age calculation
@@ -118,11 +118,11 @@ class DuplicateCheckerService
         $isMinor1 = $age1 < 18;
         $isMinor2 = $age2 < 18;
     
-        // Normalize addresses before comparison
-        if (isset($record1['address']) && isset($record2['address'])) {
-            $record1['address'] = $this->normalizeAddress($record1['address']);
-            $record2['address'] = $this->normalizeAddress($record2['address']);
-        }
+        // // Normalize addresses before comparison
+        // if (isset($record1['address']) && isset($record2['address'])) {
+        //     $record1['address'] = $this->normalizeAddress($record1['address']);
+        //     $record2['address'] = $this->normalizeAddress($record2['address']);
+        // }
     
         // If both are minors, check identifying information
         if ($isMinor1 && $isMinor2) {
@@ -166,7 +166,7 @@ class DuplicateCheckerService
         
         return $averageSimilarity > 75;
     }
-    
+
     public function similarity($str1, $str2, $weight = 1) {
         // Calculate Levenshtein distance
         $levenshtein = levenshtein($str1, $str2);

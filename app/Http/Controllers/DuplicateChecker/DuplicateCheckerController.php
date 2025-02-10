@@ -103,6 +103,11 @@ class DuplicateCheckerController extends Controller
         
             if (!$response) {
                 // If postToILS returns null or a failure response, we handle it
+                Log::channel('slack')->error('Error posting to ILS API', [
+                    'data' => $data,
+                    'ip' => request()->ip(),
+                    'user_agent' => request()->userAgent()
+                ]);
                 return response()->json(['message' => 'Error posting to ILS API'], 500);
             }
             // If ILS API call was successful, proceed to update Redis
@@ -114,6 +119,11 @@ class DuplicateCheckerController extends Controller
 
             // Send welcome email
             $this->sendWelcomeEmail($data);
+            Log::channel('slack')->info('Record added successfully', [
+                'data' => $data,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
             return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
         } catch (\Exception $e) {
             // If there's an error with the ILS API call, handle the exception and prevent Redis write

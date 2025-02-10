@@ -82,4 +82,38 @@ class DailyAlertController extends Controller
 
         return response()->json(['result' => $result]);
     }
+
+    public function listBarcodes()
+    {
+        // Get the data from Redis
+        $data = $this->redisService->get('cre_registration_record');
+
+        // Check if the data is in JSON format, and decode it
+        if (!is_array($data)) {
+            $data = json_decode($data, true);
+        }
+
+        // Check for JSON errors
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return response()->json(['error' => 'Invalid JSON data'], 400);
+        }
+
+        // Format the data into the desired string format
+        $formattedData = array_map(function ($entry) {
+            // Ensure each entry has the necessary fields before formatting
+            if (isset($entry['barcode'], $entry['firstname'], $entry['lastname'], $entry['phone'], $entry['email'], $entry['dateofbirth'])) {
+                return $entry['barcode'] . ' - ' . $entry['firstname'] . ',' . $entry['lastname'] . ',' . $entry['phone'] . ',' . $entry['email'] . ',' . $entry['dateofbirth'];
+            }
+            return null;
+        }, $data);
+
+        // Remove any null values from the formatted data (if any)
+        $formattedData = array_filter($formattedData, function ($item) {
+            return $item !== null;
+        });
+
+        // Return the formatted data as JSON
+        return response()->json(['barcodes' => array_values($formattedData)]);
+    }
+
 }

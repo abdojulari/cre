@@ -19,8 +19,8 @@ Route::post('/customer-auth', [UserAuthenticationController::class, 'authenticat
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::get('/duplicate-detector', [DailyAlertController::class, 'duplicateDetectionAlert']);
-Route::get('/barcode-lookup', [DailyAlertController::class, 'barcodeLookup']);
-
+Route::post('/barcode-lookup', [DailyAlertController::class, 'barcodeLookup']);
+Route::get('/list-barcodes', [DailyAlertController::class, 'listBarcodes']);
 Route::get('/test-slack-notification', function () {
     $duplicates = [
         ['firstname' => 'John', 'lastname' => 'Doe', 'dateofbirth' => '1990-01-01', 'phone' => '1234567890', 'email' => 'john.doe@example.com'],
