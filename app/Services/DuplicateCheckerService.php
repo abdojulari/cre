@@ -82,10 +82,11 @@ class DuplicateCheckerService
             // Case 4: Both are minors with different lastnames
             if ($isMinor1 && $isMinor2) {
                 // Only compare firstname and DOB
-                $fieldWeights = [
-                    'firstname' => 1.0,
-                    'dateofbirth' => 1.0
-                ];
+                // $fieldWeights = [
+                //     'firstname' => 1.0,
+                //     'dateofbirth' => 1.0
+                // ];
+                return false;
             }
             
             // Case 5: One is minor, one is adult with different lastnames
