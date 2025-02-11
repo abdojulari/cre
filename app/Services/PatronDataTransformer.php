@@ -48,7 +48,7 @@ class PatronDataTransformer
         if (!empty($data['category5'])) {
             $categories['category05'] = [
                 '@resource' => '/policy/patronCategory05',
-                '@key' => $data['category5']
+                '@key' => $data['category5'] ? $data['category5'] : 'ENOCONSENT'
             ];
         }
 
