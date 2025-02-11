@@ -16,20 +16,24 @@ class DuplicateCheckerService
         }
         return null;
     }
-
-    // public function normalizeAddress($address) {
-    //     // Convert to lowercase
-    //     $normalized = strtolower($address);
+    public function normalizeAddress($address) {
+        // Convert to lowercase
+        $normalized = strtolower($address);
         
-    //     // Remove punctuation
-    //     $normalized = preg_replace('/[^\w\s]/', '', $normalized);
+        // Remove punctuation
+        $normalized = preg_replace('/[^\w\s]/', '', $normalized);
         
-    //     // Standardize common abbreviations
-    //     $normalized = str_replace(['avenue', 'ave', 'nw'], ['ave', 'ave', 'nw'], $normalized);
+        // Standardize common abbreviations
+        $normalized = str_replace(
+            ['avenue', 'ave', 'nw', 'street', 'st', 'str', 'boulevard', 'blvd', 'road', 'rd', 'drive', 'dr'],
+            ['ave', 'ave', 'nw', 'st', 'st', 'st', 'blvd', 'blvd', 'rd', 'rd', 'dr', 'dr'],
+            $normalized
+        );
         
-    //     return $normalized;
-    // }
-
+        return $normalized;
+    }
+    
+    //TODO: get rid of this function when everything is working
     // public function isDuplicate($record1, $record2) {
     //     // Age calculation
     //     $dob1 = new \DateTime($record1['dateofbirth']);
@@ -119,10 +123,10 @@ class DuplicateCheckerService
         $isMinor2 = $age2 < 18;
     
         // // Normalize addresses before comparison
-        // if (isset($record1['address']) && isset($record2['address'])) {
-        //     $record1['address'] = $this->normalizeAddress($record1['address']);
-        //     $record2['address'] = $this->normalizeAddress($record2['address']);
-        // }
+        if (isset($record1['address']) && isset($record2['address'])) {
+            $record1['address'] = $this->normalizeAddress($record1['address']);
+            $record2['address'] = $this->normalizeAddress($record2['address']);
+        }
     
         // If both are minors, check identifying information
         if ($isMinor1 && $isMinor2) {
