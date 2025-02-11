@@ -134,9 +134,8 @@ class DuplicateCheckerService
         }
         // If one is minor and one is adult, focus heavily on date of birth
         else if ($isMinor1 xor $isMinor2) {
-            $fieldWeights = [
-                'dateofbirth' => 3.0  // Higher weight to ensure age difference is significant
-            ];
+            // Allow shared contact details for parent-child
+                return false;  // Not a duplicate
         }
         // Both are adults - use all fields with higher weight on contact details
         else {
@@ -168,6 +167,10 @@ class DuplicateCheckerService
     }
 
     public function similarity($str1, $str2, $weight = 1) {
+         // Convert both strings to lowercase to avoid case sensitivity issues
+        $str1 = strtolower($str1);
+        $str2 = strtolower($str2);
+            
         // Calculate Levenshtein distance
         $levenshtein = levenshtein($str1, $str2);
         $maxLen = max(strlen($str1), strlen($str2));
