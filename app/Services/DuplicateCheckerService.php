@@ -143,13 +143,19 @@ class DuplicateCheckerService
         }
         // Both are adults - use all fields with higher weight on contact details
         else {
+            if (
+                strtolower($record1['email']) === strtolower($record2['email']) &&
+                strtolower($record1['phone']) === strtolower($record2['phone'])
+            ) {
+                return true; // Consider it a duplicate if contact details match
+            }
             $fieldWeights = [
                 'firstname' => 1.0,
                 'lastname' => 1.0,
-                'phone' => 3.0,
+                'phone' => 4.0,
                 'email' => 3.0,
                 'dateofbirth' => 1.0,
-                'address' => 3.0
+                'address' => 1.0
             ];
         }
     
