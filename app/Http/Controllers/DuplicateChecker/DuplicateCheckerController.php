@@ -10,6 +10,7 @@ use App\Services\PatronDataTransformer;
 use App\Services\AccuracyDataService;
 use App\Services\ExternalApiService;
 use App\Services\DuplicateCheckerService;
+use App\Services\BarcodeGeneratorService;
 use Illuminate\Support\Facades\Http;
 use App\Mail\SendWelcomeEmail;
 use Illuminate\Support\Facades\Mail;
@@ -21,13 +22,15 @@ class DuplicateCheckerController extends Controller
     protected $accuracyDataService;
     protected $externalApiService;
     protected $duplicateCheckerService;
+    protected $barcodeGeneratorService;
 
     public function __construct(
         PatronDataTransformer $transformer, 
         RedisService $redisService, 
         AccuracyDataService $accuracyDataService,
         ExternalApiService $externalApiService,
-        DuplicateCheckerService $duplicateCheckerService
+        DuplicateCheckerService $duplicateCheckerService,
+        BarcodeGeneratorService $barcodeGeneratorService
     )
     {
         $this->transformer = $transformer;
@@ -35,6 +38,7 @@ class DuplicateCheckerController extends Controller
         $this->accuracyDataService = $accuracyDataService;
         $this->externalApiService = $externalApiService;
         $this->duplicateCheckerService = $duplicateCheckerService;
+        $this->barcodeGeneratorService = $barcodeGeneratorService;
     }
   
     public function store(Request $request) {
@@ -51,7 +55,7 @@ class DuplicateCheckerController extends Controller
             'password' => 'nullable|string',
             'profile' => 'nullable|string',
             'city' => 'required|string',
-            'barcode' => 'required|string',
+            'barcode' => 'nullable|string',
             'library' => 'nullable|string',
             'careof' => 'nullable|string',
             'category1' => 'nullable|string',
@@ -93,7 +97,13 @@ class DuplicateCheckerController extends Controller
                 'message' => 'Duplicate record found with fuzzy logic.',
             ], 409);
         }
-    
+        
+        // if there is no duplicate, generate the barcode
+        $barcodeService = $this->barcodeGeneratorService->generate();
+        $responseData = json_decode($barcodeService->getContent(), true);  // Decodes as an associative array
+        $barcode = $responseData['barcode'];
+        $data['barcode'] = $barcode;
+        // Transform the data
         $transformedData = $this->transformer->transform($data, 'OLR');
        
         // Wrap the ILS post call in try-catch block to handle errors
