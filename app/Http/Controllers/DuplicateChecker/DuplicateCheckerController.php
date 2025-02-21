@@ -71,6 +71,8 @@ class DuplicateCheckerController extends Controller
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
         $expiryDate = $currentDate->format('Y-m-d');
         $data['expirydate'] = $expiryDate;
+        // convert dateofbirth to yyyy-mm-dd format
+        $data['dateofbirth'] = date('Y-m-d', strtotime($data['dateofbirth']));
 
         // Check if the record already exists
         $path = storage_path('app/duplicates.json');
@@ -352,5 +354,68 @@ class DuplicateCheckerController extends Controller
             'accuracy' => $accuracyFormatted. '%'
         ]);
     }
-        
+    
+    public function setDataForStatistics(Request $request)
+    {
+        $data = $request->validate([
+            'utm_source' => 'nullable|string',
+            'utm_medium' => 'nullable|string',
+            'utm_campaign' => 'nullable|string',
+            'utm_term' => 'nullable|string',
+            'utm_content' => 'nullable|string',
+            'event_category' => 'nullable|string',
+            'event_label' => 'nullable|string',
+            'screen_name' => 'nullable|string',
+            'registration_type' => 'nullable|string',
+            'postal_code' => 'nullable|string',
+            'dob' => 'nullable|date',
+            'step' => 'nullable|numeric',
+            'date' => 'nullable|date',
+            'time' => 'nullable|string',
+        ]);
+    
+       // get present date
+        $data['date'] = date('Y-m-d');
+        $data['time'] = date('H:i:s');
+        Log::info('Data for statistics:', ['data' => $data]);
+
+       // Get existing data from Redis, initialize as empty array if not exists
+       $existingData = $this->redisService->get('statistics_data') ?? [];
+       
+       // If existing data is a string (JSON), decode it
+       if (is_string($existingData)) {
+           $existingData = json_decode($existingData, true) ?? [];
+       }
+
+       // Ensure existingData is an array
+       if (!is_array($existingData)) {
+           $existingData = [];
+       }
+
+       // Add new data to the array
+       $existingData[] = $data;
+
+       // Store the updated array back to Redis
+       $this->redisService->set('statistics_data', $existingData);
+
+       return response()->json(['message' => 'Data received for statistics']);
+    }
+
+    public function getDataForStatistics() 
+    {
+        // Get existing data from Redis
+        $existingData = $this->redisService->get('statistics_data') ?? [];
+
+        // If data is a string, decode it into an array
+        if (is_string($existingData)) {
+            $existingData = json_decode($existingData, true) ?? [];
+        }
+
+        // Ensure that existingData is an array
+        if (!is_array($existingData)) {
+            return response()->json(['message' => 'No valid data found in Redis.']);
+        }
+
+        return response()->json($existingData);
+    }
 }

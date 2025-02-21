@@ -16,4 +16,5 @@ return [
     'user_auth' => env('USER_AUTH', 'user_auth'),
     'rate_limit' => env('RATE_LIMIT', 'rate_limit'),
     'custom_security_token' => env('CUSTOM_SECURITY_TOKEN', 'custom_security_token'),
+    'email' => env('EMAIL_ADDRESS', 'abdul.ojulari@epl.ca'),
 ];

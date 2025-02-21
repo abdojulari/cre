@@ -14,10 +14,12 @@ class PatronDataTransformer
      */
     public function transform(array $data, string $product): array
     {
-        // Validate the profile value
-        $allowedProfiles = ['EPL_SELF', 'EPL_SELFJ'];
-        if (!in_array($data['profile'] ?? '', $allowedProfiles, true)) {
-            throw new \InvalidArgumentException("Invalid profile value. Allowed values are: " . implode(', ', $allowedProfiles));
+        // Validate the profile value only if product is 'OLR'
+        if ($product === 'OLR') {
+            $allowedProfiles = ['EPL_SELF', 'EPL_SELFJ'];
+            if (!in_array($data['profile'] ?? '', $allowedProfiles, true)) {
+                throw new \InvalidArgumentException("Invalid profile value. Allowed values are: " . implode(', ', $allowedProfiles));
+            }
         }
 
         // Initialize the categories and remove null values

@@ -12,4 +12,12 @@ class Kernel extends ConsoleKernel
     ];
 
     // Rest of the class code...
+
+    protected function schedule(Schedule $schedule): void
+    {
+        $schedule->command('statistics:export')
+                ->dailyAt('00:45')
+                ->withoutOverlapping()
+                ->runInBackground();
+    }
 }

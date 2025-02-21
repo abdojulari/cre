@@ -131,9 +131,14 @@ In this case, the fields that match perfectly will strongly drive the final scor
         - Set Authorization/Auth Type to `Bearer Token` and access the endpoint `https://cre.test/api/duplicates` using the 'POST' method.
 
 ## Commands
-**Run Commands for processing ILS Data**
+**Run Commands for processing ILS Data every 2 minutes**
 ```
 php artisan data:process
+```
+
+**Run Commands for processing ILS Data at 12:45 am**
+```
+php artisan data:replace
 ```
 
 ## Local settings
