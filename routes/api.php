@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Log;
 
 Route::post('/duplicates', [DuplicateCheckerController::class, 'store'])->middleware(['client','throttle:duplicates', 'sanctum-auth']);
-Route::post('/lpass', [DuplicateCheckerController::class, 'lpass'])->middleware('client');
+Route::post('/lpass', [DuplicateCheckerController::class, 'lpass'])->middleware(['client','sanctum-auth']);
 Route::get('/barcode', [BarcodeGeneratorController::class, 'create'])->middleware('client');
 Route::get('/accuracy', [DuplicateCheckerController::class, 'evaluateDuplicates']);
-Route::post('/customer-auth', [UserAuthenticationController::class, 'authenticateUser'])->middleware('client');
+Route::post('/customer-auth', [UserAuthenticationController::class, 'authenticateUser'])->middleware(['client', 'sanctum-auth']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::get('/duplicate-detector', [DailyAlertController::class, 'duplicateDetectionAlert']);
