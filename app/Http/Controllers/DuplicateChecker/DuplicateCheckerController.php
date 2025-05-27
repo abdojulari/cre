@@ -418,4 +418,104 @@ class DuplicateCheckerController extends Controller
 
         return response()->json($existingData);
     }
+
+    public function getLibraryStatistics()
+    {
+        // Get data from Redis
+        $dataInRedis = $this->redisService->get('cre_registration_record');
+        
+        // If Redis data is a string, decode it
+        if (is_string($dataInRedis)) {
+            $dataInRedis = json_decode($dataInRedis, true) ?? [];
+        }
+        
+        // Ensure dataInRedis is an array
+        if (!is_array($dataInRedis)) {
+            return response()->json([
+                'message' => 'No valid data found in Redis.',
+                'statistics' => []
+            ]);
+        }
+
+        // Initialize array to store library counts
+        $libraryStats = [];
+        $totalRecords = 0;
+
+        // Count records for each library
+        foreach ($dataInRedis as $record) {
+            $library = $record['library'] ?? 'Unknown';
+            if (!isset($libraryStats[$library])) {
+                $libraryStats[$library] = 0;
+            }
+            $libraryStats[$library]++;
+            $totalRecords++;
+        }
+
+        // Sort libraries by count in descending order
+        arsort($libraryStats);
+
+        return response()->json([
+            'statistics' => [
+                'by_library' => $libraryStats,
+                'total_records' => $totalRecords,
+                'total_libraries' => count($libraryStats)
+            ]
+        ]);
+    }
+
+    // quick duplicate check without using fuzzy logic
+    public function quickDuplicateCheck(Request $request)
+    {
+        $data = $request->validate([
+            'firstname' => 'required|string',
+            'lastname' => 'required|string',
+            'middlename' => 'nullable|string',
+            'dateofbirth' => 'required|date',
+        ]);
+
+        // Get and decode Redis data
+        $dataInRedis = $this->redisService->get('cre_registration_record');
+       
+        // If Redis data is a string, decode it
+        if (is_string($dataInRedis)) {
+            $dataInRedis = json_decode($dataInRedis, true) ?? [];
+        }
+        
+        // Ensure dataInRedis is an array
+        if (!is_array($dataInRedis)) {
+            $dataInRedis = [];
+        }
+
+        // Format the dateofbirth to match the format in Redis
+        $formattedDateOfBirth = date('Y-m-d', strtotime($data['dateofbirth']));
+
+        // Check each record in Redis for matches
+        foreach ($dataInRedis as $record) {
+            $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
+            
+            // Check for exact matches
+            if (
+                strtolower($record['firstname']) === strtolower($data['firstname']) &&
+                strtolower($record['lastname']) === strtolower($data['lastname']) &&
+                $recordDateOfBirth === $formattedDateOfBirth &&
+                (
+                    // If middlename is provided, check it too
+                    empty($data['middlename']) ||
+                    (isset($record['middlename']) && strtolower($record['middlename']) === strtolower($data['middlename']))
+                )
+            ) {
+                Log::info('Duplicate record found:', ['record' => $record]);
+                return response()->json([
+                    'message' => 'Record already exists.',
+                    'match' => true,
+                    'matched_record' => $record
+                ], 409);
+            }
+        }
+        Log::info('No duplicate record found.');
+        return response()->json([
+            'message' => 'No duplicate record found.',
+            'match' => false
+        ]);
+    }
 }

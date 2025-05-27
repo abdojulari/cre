@@ -82,6 +82,7 @@ class PatronDataTransformer
             'privilegeExpiresDate' => $data['expirydate'] ?? null,
             'birthDate' => $data['dateofbirth'] ?? null,
             'address1' => $this->transformAddress($data),
+            'keepCircHistory' => 'CIRCRULE'
         ];
 
         // Remove middleName from array if it's null or empty

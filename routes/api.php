@@ -34,3 +34,4 @@ Route::get('/test-slack-notification', function () {
     Log::info('Slack notification sent', $duplicates);
     return response()->json(['message' => 'Slack notification sent!']);
 });
+Route::post('/quick-duplicate-check', [DuplicateCheckerController::class, 'quickDuplicateCheck']);
