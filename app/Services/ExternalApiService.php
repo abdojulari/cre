@@ -29,25 +29,69 @@ class ExternalApiService
         //Call the ILS API endpoint to save the data
         $sessionToken = $this->getSessionToken();
         $url = config('cre.ils_base_url') . config('cre.patron_endpoint');
+        
+        // Log the request details
+        Log::info('ILS API Request:', [
+            'url' => $url,
+            'sessionToken' => $sessionToken,
+            'request_data' => $data
+        ]);
+
         try {
-        $response = Http::withHeaders([
-            'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
-            'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',
-            'sd-originating-app-id' => config('cre.apps_id'),
-            'x-sirs-clientID' => config('cre.symws_client_id'),
-            'x-sirs-sessionToken' => $sessionToken,
-            'SD-Prompt-Return' => 'USER_PRIVILEGE_OVRCD/Y'
-        ])->post($url, $data);
-        if ($response->successful()) {
-            return $response->json();
-        }
-        } catch (\Exception $e) {
-            Log::error('Error posting to ILS API: ' . $e->getMessage());
-            Log::channel('slack')->critical('Error Posting to ILS API', [
-                'error' => $e->getMessage(),
-                'data' => $data
+            $response = Http::withHeaders([
+                'Accept' => 'application/vnd.sirsidynix.roa.resource.v2+json',
+                'Content-Type' => 'application/vnd.sirsidynix.roa.resource.v2+json',
+                'sd-originating-app-id' => config('cre.apps_id'),
+                'x-sirs-clientID' => config('cre.symws_client_id'),
+                'x-sirs-sessionToken' => $sessionToken,
+                'SD-Prompt-Return' => 'USER_PRIVILEGE_OVRCD/Y'
+            ])->post($url, $data);
+
+            // Log the raw response
+            Log::info('ILS API Raw Response:', [
+                'status' => $response->status(),
+                'headers' => $response->headers(),
+                'body' => $response->body()
             ]);
-            return response()->json(['message' => 'Error posting to ILS API'], 500);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                Log::info('ILS API Successful Response:', [
+                    'response_data' => $responseData
+                ]);
+                return $responseData;
+            } else {
+                // Log unsuccessful response
+                Log::error('ILS API Error Response:', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'request_data' => $data
+                ]);
+                Log::channel('slack')->error('ILS API Error Response', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'request_data' => $data
+                ]);
+                return null;
+            }
+        } catch (\Exception $e) {
+            // Log the full exception details
+            Log::error('ILS API Exception:', [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $data
+            ]);
+            
+            Log::channel('slack')->critical('ILS API Exception', [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'request_data' => $data
+            ]);
+            
+            return null;
         }
     }
 

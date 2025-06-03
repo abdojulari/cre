@@ -43,18 +43,24 @@ class DuplicateCheckerController extends Controller
   
     public function store(Request $request) {
         $data = $request->validate([
+            'id' => 'nullable|string',
+            'preferredname' => 'nullable|boolean',
             'firstname' => 'required|string',
             'lastname' => 'required|string',
             'middlename' => 'nullable|string',
             'dateofbirth' => 'required|date',
-            'email' => 'required|email',
-            'phone' => 'required|string',
+            'email' => 'nullable|email',
+            'phone' => 'nullable|string',
             'address' => 'required|string',
+            'address2' => 'nullable|string',
             'postalcode' => 'required|string',
+            'postalcode2' => 'nullable|string',
             'province' => 'nullable|string',
+            'province2' => 'nullable|string',
             'password' => 'nullable|string',
             'profile' => 'nullable|string',
             'city' => 'required|string',
+            'city2' => 'nullable|string',
             'barcode' => 'nullable|string',
             'library' => 'nullable|string',
             'careof' => 'nullable|string',
@@ -131,7 +137,6 @@ class DuplicateCheckerController extends Controller
             // Send welcome email
             $this->sendWelcomeEmail($data);
             Log::channel('slack')->info('Record added successfully', [
-                'data' => $data,
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
@@ -152,6 +157,8 @@ class DuplicateCheckerController extends Controller
     public function lpass(Request $request) {
         // Validate incoming request data
         $data = $request->validate([
+            'id' => 'nullable|string',
+            'preferredname' => 'nullable|boolean',
             'firstname' => 'required|string',
             'lastname' => 'required|string',
             'middlename' => 'nullable|string',
@@ -263,7 +270,10 @@ class DuplicateCheckerController extends Controller
                 // Transform and post new data when ILS data is null (i.e., it doesn't exist)
                 $transformedData = $this->transformer->transform($data, 'LPASS');
                 $response = $this->externalApiService->postToILS($transformedData);
-    
+
+                // email the data to the user
+                $this->sendWelcomeEmail($data);
+            
                 if (!$response) {
                     return response()->json(['message' => 'Error posting to ILS API'], 500);
                 }

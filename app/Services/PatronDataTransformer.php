@@ -64,6 +64,7 @@ class PatronDataTransformer
         // Prepare the main array with required fields
         $transformedData = [
             '@resource' => '/user/patron',
+            'id' => $data['id'] ?? null,
             '@key' => $product === 'LPASS' ? $data['key'] ?? null : null,
             'barcode' => $data['barcode'] ?? null,
             'lastName' => $data['lastname'] ?? null,
@@ -82,7 +83,9 @@ class PatronDataTransformer
             'privilegeExpiresDate' => $data['expirydate'] ?? null,
             'birthDate' => $data['dateofbirth'] ?? null,
             'address1' => $this->transformAddress($data),
-            'keepCircHistory' => 'CIRCRULE'
+            'address2' => $this->transformAddress2($data) ?? [],
+            'keepCircHistory' => 'CIRCRULE',
+            'usePreferredName' => $data['preferredname'] ?? false
         ];
 
         // Remove middleName from array if it's null or empty
@@ -156,6 +159,45 @@ class PatronDataTransformer
                     '@key' => 'STREET'
                 ],
                 'data' => $data['address'] ?? null,
+            ]
+        ];
+    }
+
+    /**
+     * Transform address data.
+     *
+     * @param array $data
+     * @return array
+     */
+    private function transformAddress2(array $data): array
+    {
+        return [
+            [
+                '@resource' => '/user/patron/address2',
+                '@key' => '2',
+                'code' => [
+                    '@resource' => '/policy/patronAddress2',
+                    '@key' => 'CITY/STATE'
+                ],
+                'data' => ($data['city2'] ?? '') . ',' . ($data['province2'] ?? ''),
+            ],
+            [
+                '@resource' => '/user/patron/address2',
+                '@key' => '5',
+                'code' => [
+                    '@resource' => '/policy/patronAddress2',
+                    '@key' => 'POSTALCODE'
+                ],
+                'data' => $data['postalcode2'] ?? null,
+            ],
+            [
+                '@resource' => '/user/patron/address2',
+                '@key' => '4',
+                'code' => [
+                    '@resource' => '/policy/patronAddress2',
+                    '@key' => 'STREET'
+                ],
+                'data' => $data['address2'] ?? null,
             ]
         ];
     }
