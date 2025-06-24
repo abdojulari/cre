@@ -175,7 +175,7 @@ class ExternalApiService
         }
     
         // Attempt to get patron data
-        $patronUrl = config('cre.ils_base_url') . 'user/patron/key/' . $patronKey . '?includeFields=*,address1';
+        $patronUrl = config('cre.ils_base_url') . 'user/patron/key/' . $patronKey . '?includeFields=*,address1,birthDate,profile';
     
         try {
             $response = Http::withHeaders([
@@ -186,6 +186,7 @@ class ExternalApiService
             ])->get($patronUrl);
     
             if ($response->successful()) {
+                Log::info('Patron data: ' . json_encode($response->json()));
                 $data = $this->extractUserInfo($response->json());  // Pass the array here
                 return $data;
             } else {
@@ -238,6 +239,8 @@ class ExternalApiService
             'lastName' => $response['lastName'],
             'firstName' => $response['firstName'],
             'middleName' => $response['middleName'] ?? '',  // This will be an empty string if not set
+            'dateofbirth' => $response['birthDate'],
+            'profile' => $response['profile']['@key'],
             'address' => (object)$address
         ];
     

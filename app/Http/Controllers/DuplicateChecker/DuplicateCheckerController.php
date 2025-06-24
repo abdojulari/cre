@@ -247,7 +247,7 @@ class DuplicateCheckerController extends Controller
                                 }
                                 // Always encode as JSON before saving
                                 Log::info('Updated record in ILS:', ['updatedData' => $data]);
-                                return response()->json(['message' => 'Record updated to ILS']);
+                                return response()->json(['message' => 'Record updated to ILS', 'data' => $transformedData], 200);
                             } catch (\Exception $e) {
                                 Log::error('Error updating ILS: ' . $e->getMessage());
                                 Log::channel('slack')->error('Error updating ILS - LPASS', [
@@ -279,7 +279,7 @@ class DuplicateCheckerController extends Controller
                 }
     
                 Log::info('New record added to Redis:', ['newData' => $data]);
-                return response()->json(['message' => 'New record created in Redis']);
+                return response()->json(['message' => 'Record added to ILS successfully!', 'data' => $transformedData], 201);
             }
     
         } catch (\Exception $e) {
