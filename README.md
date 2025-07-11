@@ -179,3 +179,27 @@ Log::channel('slack')->debug('Detailed debug information');
 
 ### Documentation 
 [Check Duplicate Logic](https://epldotca-my.sharepoint.com/:w:/r/personal/abdul_ojulari_epl_ca/_layouts/15/Doc.aspx?sourcedoc=%7BFF3E42D6-702F-4374-8446-C5434C6EF0BF%7D&file=DUPLICATE%20CHECKThe%20logic.docx&wdLOR=c81D8B81D-8562-1348-B0F1-E796ABDF811B&fromShare=true&action=default&mobileredirect=true)
+
+
+# Date range filtering
+GET /api/library-statistics?start_date=2024-01-01&end_date=2024-12-31&filter_type=date_range
+
+# Year only
+GET /api/library-statistics?year=2024&filter_type=year
+
+# Month and year
+GET /api/library-statistics?year=2024&month=3&filter_type=month_year
+
+# Profile filtering
+GET /api/library-statistics?profile=EPL_SELF
+
+# Combined filtering
+GET /api/library-statistics?start_date=2024-01-01&end_date=2024-03-31&profile=EPL_SELFJ
+
+
+### Example
+http://your-domain/api/library-statistics?start_date=2024-01-01&end_date=2024-12-31&filter_type=date_range
+http://your-domain/api/library-statistics?year=2024&filter_type=year
+http://your-domain/api/library-statistics?year=2024&month=3&filter_type=month_year
+http://your-domain/api/library-statistics?profile=EPL_SELF
+http://your-domain/api/library-statistics?start_date=2024-01-01&end_date=2024-03-31&profile=EPL_SELFJ

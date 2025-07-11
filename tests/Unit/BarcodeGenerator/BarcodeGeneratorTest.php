@@ -13,9 +13,9 @@ beforeEach(function () {
     // Bind the mock to the container
     app()->instance(RedisService::class, $this->redisMock);
     
-    // Set the config value for the constant prefix
-    config(['cre.start_barcode' => '30376355']);
-    config(['cre.barcode_prefix' => '212219']);
+    // Set the config values for digital barcode (matching what controller uses)
+    config(['cre.start_digital_barcode' => '00101000']);
+    config(['cre.digital_barcode_prefix' => '212217']);
 
     // Obtain the token once before the tests run
     $clientId = env('CLIENT_ID');
@@ -39,13 +39,13 @@ it('generates first barcode when no previous barcode exists', function () {
     // Arrange
     $this->redisMock
         ->shouldReceive('get')
-        ->with('barcode')
+        ->with('digital_barcode')
         ->once()
         ->andReturnNull();
     
     $this->redisMock
         ->shouldReceive('set')
-        ->with('barcode', '21221930376355')
+        ->with('digital_barcode', '21221700101000')
         ->once();
     
     // Act
@@ -56,7 +56,7 @@ it('generates first barcode when no previous barcode exists', function () {
     // Assert
     $response->assertStatus(200)
         ->assertJson([
-            'barcode' => '21221930376355'
+            'barcode' => '21221700101000'
         ]);
 });
 
@@ -64,13 +64,13 @@ it('generates next barcode when previous barcode exists', function () {
     // Arrange
     $this->redisMock
         ->shouldReceive('get')
-        ->with('barcode')
+        ->with('digital_barcode')
         ->once()
-        ->andReturn('21221930376355');
+        ->andReturn('21221700101000');
     
     $this->redisMock
         ->shouldReceive('set')
-        ->with('barcode', '21221930376356')
+        ->with('digital_barcode', '21221700101001')
         ->once();
     
     // Act
@@ -81,7 +81,7 @@ it('generates next barcode when previous barcode exists', function () {
     // Assert
     $response->assertStatus(200)
         ->assertJson([
-            'barcode' => '21221930376356'
+            'barcode' => '21221700101001'
         ]);
 });
 
@@ -89,13 +89,13 @@ it('handles large numeric values correctly', function () {
     // Arrange
     $this->redisMock
         ->shouldReceive('get')
-        ->with('barcode')
+        ->with('digital_barcode')
         ->once()
-        ->andReturn('21221999999998');
+        ->andReturn('21221799999998');
     
     $this->redisMock
         ->shouldReceive('set')
-        ->with('barcode', '21221999999999')
+        ->with('digital_barcode', '21221799999999')
         ->once();
     
     // Act
@@ -106,7 +106,7 @@ it('handles large numeric values correctly', function () {
     // Assert
     $response->assertStatus(200)
         ->assertJson([
-            'barcode' => '21221999999999'
+            'barcode' => '21221799999999'
         ]);
 });
 
@@ -114,13 +114,13 @@ it('maintains 8-digit padding for numeric part', function () {
     // Arrange
     $this->redisMock
         ->shouldReceive('get')
-        ->with('barcode')
+        ->with('digital_barcode')
         ->once()
-        ->andReturn('21221900000001');
+        ->andReturn('21221700000001');
     
     $this->redisMock
         ->shouldReceive('set')
-        ->with('barcode', '21221900000002')
+        ->with('digital_barcode', '21221700000002')
         ->once();
     
     // Act
@@ -131,6 +131,6 @@ it('maintains 8-digit padding for numeric part', function () {
     // Assert
     $response->assertStatus(200)
         ->assertJson([
-            'barcode' => '21221900000002'
+            'barcode' => '21221700000002'
         ]);
 });

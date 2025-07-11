@@ -85,7 +85,8 @@ class PatronDataTransformer
             'address1' => $this->transformAddress($data),
             'address2' => $this->transformAddress2($data) ?? [],
             'keepCircHistory' => 'CIRCRULE',
-            'usePreferredName' => $data['preferredname'] ?? false
+            'usePreferredName' => $data['usePreferredname'] ?? false,
+            'preferredName' => $data['preferredname'] ?? ''
         ];
 
         // Remove middleName from array if it's null or empty

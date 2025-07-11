@@ -155,14 +155,25 @@ class DailyAlertController extends Controller
             return response()->json(['error' => 'Invalid JSON data'], 400);
         }
 
+        // Get filter parameters from request
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $profile = $request->input('profile');
+        $filterType = $request->input('filter_type', 'all'); // all, date_range, year, month_year, monthly
+
+        // Filter data based on parameters
+        $filteredData = $this->filterDataByDateAndProfile($data, $startDate, $endDate, $year, $month, $profile, $filterType);
+      
         // Initialize statistics arrays
         $groupedData = [];
         $profileStats = [];
         $libraryProfileStats = [];
-        $totalRecords = count($data);
+        $totalRecords = count($filteredData);
         
         // Process each record
-        foreach ($data as $entry) {
+        foreach ($filteredData as $entry) {
             $library = $entry['library'] ?? 'Unknown';
             $profile = $entry['profile'] ?? 'Unknown';
             
@@ -206,7 +217,7 @@ class DailyAlertController extends Controller
             'records_by_month' => []
         ];
 
-        foreach ($data as $entry) {
+        foreach ($filteredData as $entry) {
             if (isset($entry['createdAt'])) {
                 $date = new \DateTime($entry['createdAt']);
                 $monthYear = $date->format('Y-m');
@@ -251,11 +262,140 @@ class DailyAlertController extends Controller
                         'EPL_SELFJ' => $profileStats['EPL_SELFJ'] ?? 0,
                         'Other' => array_sum($profileStats) - (($profileStats['EPL_SELF'] ?? 0) + ($profileStats['EPL_SELFJ'] ?? 0))
                     ]
+                ],
+                'filters_applied' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'year' => $year,
+                    'month' => $month,
+                    'profile' => $profile,
+                    'filter_type' => $filterType
                 ]
             ]
         ];
 
         return response()->json($statistics);
+    }
+
+    /**
+     * Filter data based on date and profile parameters
+     */
+    private function filterDataByDateAndProfile($data, $startDate, $endDate, $year, $month, $profile, $filterType)
+    {
+        return array_filter($data, function ($entry) use ($startDate, $endDate, $year, $month, $profile, $filterType) {
+            // Filter by profile if specified
+            if ($profile && isset($entry['profile']) && $entry['profile'] !== $profile) {
+                return false;
+            }
+
+            // If no date filtering is requested, return all records
+            if ($filterType === 'all' && !$startDate && !$endDate && !$year && !$month) {
+                return true;
+            }
+
+            // Check if entry has createdAt field
+            if (!isset($entry['createdAt'])) {
+                return false;
+            }
+
+            try {
+                $entryDate = new \DateTime($entry['createdAt']);
+            } catch (\Exception $e) {
+                return false; // Skip invalid dates
+            }
+
+            // Apply different filter types
+            switch ($filterType) {
+                case 'date_range':
+                    return $this->filterByDateRange($entryDate, $startDate, $endDate);
+                
+                case 'year':
+                    return $this->filterByYear($entryDate, $year);
+                
+                case 'month_year':
+                    return $this->filterByMonthYear($entryDate, $year, $month);
+                
+                case 'monthly':
+                    return $this->filterByMonthly($entryDate, $startDate, $endDate);
+                
+                default:
+                    // Default behavior: apply all filters if provided
+                    if ($startDate && $endDate && !$this->filterByDateRange($entryDate, $startDate, $endDate)) {
+                        return false;
+                    }
+                    if ($year && !$this->filterByYear($entryDate, $year)) {
+                        return false;
+                    }
+                    if ($month && $year && !$this->filterByMonthYear($entryDate, $year, $month)) {
+                        return false;
+                    }
+                    return true;
+            }
+        });
+    }
+
+    /**
+     * Filter by date range (YYYY-MM-DD format)
+     */
+    private function filterByDateRange($entryDate, $startDate, $endDate)
+    {
+        if (!$startDate || !$endDate) {
+            return true;
+        }
+
+        try {
+            $start = new \DateTime($startDate);
+            $end = new \DateTime($endDate);
+            $end->setTime(23, 59, 59); // Include the entire end date
+
+            return $entryDate >= $start && $entryDate <= $end;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Filter by year only
+     */
+    private function filterByYear($entryDate, $year)
+    {
+        if (!$year) {
+            return true;
+        }
+
+        return $entryDate->format('Y') === $year;
+    }
+
+    /**
+     * Filter by month and year
+     */
+    private function filterByMonthYear($entryDate, $year, $month)
+    {
+        if (!$year || !$month) {
+            return true;
+        }
+
+        return $entryDate->format('Y-m') === $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Filter by monthly periods within a date range
+     */
+    private function filterByMonthly($entryDate, $startDate, $endDate)
+    {
+        if (!$startDate || !$endDate) {
+            return true;
+        }
+
+        try {
+            $start = new \DateTime($startDate);
+            $end = new \DateTime($endDate);
+            $end->setTime(23, 59, 59);
+
+            return $entryDate >= $start && $entryDate <= $end;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
 }

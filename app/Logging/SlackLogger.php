@@ -4,6 +4,7 @@ namespace App\Logging;
 
 use Monolog\Logger;
 use Monolog\Handler\SlackWebhookHandler;
+use Monolog\Handler\NullHandler;
 use Monolog\Formatter\LineFormatter;
 
 class SlackLogger
@@ -13,8 +14,9 @@ class SlackLogger
         try {
             $webhookUrl = config('logging.channels.slack.url');
             
-            if (empty($webhookUrl)) {
-                throw new \Exception('Slack webhook URL is not configured');
+            // Return NullHandler for testing environment or empty webhook
+            if (empty($webhookUrl) || app()->environment('testing')) {
+                return new Logger('slack', [new NullHandler()]);
             }
 
             $handler = new SlackWebhookHandler(
@@ -45,7 +47,8 @@ class SlackLogger
         } catch (\Exception $e) {
             // Log the error to Laravel's default log
             error_log('SlackLogger Error: ' . $e->getMessage());
-            throw $e;
+            // Return NullHandler instead of throwing exception
+            return new Logger('slack', [new NullHandler()]);
         }
     }
 }

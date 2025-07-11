@@ -44,7 +44,6 @@ class DuplicateCheckerController extends Controller
     public function store(Request $request) {
         $data = $request->validate([
             'id' => 'nullable|string',
-            'preferredname' => 'nullable|boolean',
             'firstname' => 'required|string',
             'lastname' => 'required|string',
             'middlename' => 'nullable|string',
@@ -69,7 +68,11 @@ class DuplicateCheckerController extends Controller
             'category3' => 'nullable|string',
             'category4' => 'nullable|string',
             'category5' => 'nullable|string',
-            'category6' => 'nullable|string'
+            'category6' => 'nullable|string',
+            'createdAt' => 'nullable|date',
+            'usePreferredname' => 'nullable|boolean',
+            'preferredname' => 'nullable|string',
+            'source' => 'nullable|string',
         ]);    
     
         $currentDate = new \DateTime();
@@ -79,6 +82,7 @@ class DuplicateCheckerController extends Controller
         $data['expirydate'] = $expiryDate;
         // convert dateofbirth to yyyy-mm-dd format
         $data['dateofbirth'] = date('Y-m-d', strtotime($data['dateofbirth']));
+        $data['createdAt'] = now()->format('Y-m-d');
 
         // Check if the record already exists
         $path = storage_path('app/duplicates.json');
@@ -112,7 +116,7 @@ class DuplicateCheckerController extends Controller
         $barcode = $responseData['barcode'];
         $data['barcode'] = $barcode;
         // Transform the data
-        $transformedData = $this->transformer->transform($data, 'OLR');
+        $transformedData = $this->transformer->transform($data, $data['source']);
        
         // Wrap the ILS post call in try-catch block to handle errors
         try {
@@ -186,11 +190,13 @@ class DuplicateCheckerController extends Controller
             'status' => 'nullable|string',
             'branch' => 'nullable|string',
             'notes' => 'nullable|string',
+            'createdAt' => 'nullable|date',
         ]);
     
         // Add timestamps
-        $data['createdAt'] = now()->toDateTimeString();
-        $data['modifiedAt'] = now()->toDateTimeString();
+        $data['createdAt'] = now()->format('Y-m-d');
+        $data['modifiedAt'] = now()->format('Y-m-d');
+        
         $data['key'] = $this->externalApiService->retrieveILSData($data)['@key'] ?? null;
     
         try {
@@ -382,6 +388,7 @@ class DuplicateCheckerController extends Controller
             'step' => 'nullable|numeric',
             'date' => 'nullable|date',
             'time' => 'nullable|string',
+            'createdAt' => 'nullable|date',
         ]);
     
        // get present date

@@ -197,19 +197,29 @@ it('detects duplicate record', function () {
         ->shouldReceive('retrieveDuplicateUsingCache')
         ->andReturn(true);
 
+    $this->barcodeGeneratorService
+        ->shouldReceive('generate')
+        ->andReturn(response()->json(['barcode' => '123456789']));
+
     $response = $this->withHeaders([
         'Authorization' => 'Bearer '.$this->token,
         'X-Sanctum-Token' => $this->authToken 
         ])->postJson('/api/duplicates',[
-            'firstname' => 'Hunkend',
-            'lastname' => 'Doacche',
-            'dateofbirth' => '2089-05-14',
-            'email' => 'hunkend@example.com',
-            'phone' => '7806455102',
-            'address' => '123 Stubborn Goat St',
-            'postalcode' => '980931',
-            'city' => 'Edmonton',
-            'barcode' => '22211099393'
+            "firstname" => "Kemi",
+            "lastname" => "Adio",
+            "middlename" => null,
+            "dateofbirth" => "1964-06-29",
+            "email" => "kemia@adio.com",
+            "phone" => "289-988-2822",
+            "address" => "345 17032 45 Street Northwest",
+            "postalcode" => "T5Y 4E4",
+            "province" => "AB",
+            "password" => "222222",
+            "profile" => "EPL_SELF",
+            "city" => "Edmonton",
+            "category5" => "ENOCONSENT",
+            "expirydate" => "2025-07-27",
+            "barcode" => "21221400101010"
         ]);
     
     expect($response->status())->toBe(409)

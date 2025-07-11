@@ -18,10 +18,10 @@ class BarcodeGeneratorController extends Controller
     public function create()
     {
         // Define the constant prefix for the barcode
-        $constantPrefix = config('cre.barcode_prefix'); // '212219' create an environment variable for this
-        $startBarcode = config('cre.start_barcode');
+        $constantPrefix = config('cre.digital_barcode_prefix'); // '212219' create an environment variable for this
+        $startBarcode = config('cre.start_digital_barcode');
         // Get the last generated barcode from Redis
-        $lastBarcode = $this->redisService->get('barcode');
+        $lastBarcode = $this->redisService->get('digital_barcode');
         if ($lastBarcode) {
             // Extract the numeric part and increment it by 1
             $lastNumericPart = (int)substr($lastBarcode, strlen($constantPrefix));
@@ -37,7 +37,7 @@ class BarcodeGeneratorController extends Controller
         // Generate the new barcode
         $newBarcode = $constantPrefix . $newNumericPartPadded;
         // Save the new barcode to Redis
-        $this->redisService->set('barcode', $newBarcode);
+        $this->redisService->set('digital_barcode', $newBarcode);
         // Return the new barcode to the user
         return response()->json(['barcode' => $newBarcode]);
     }

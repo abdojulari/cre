@@ -87,6 +87,8 @@ it('authenticates user successfully', function () {
         'lastName' => 'Doe',
         'firstName' => 'John',
         'middleName' => 'Smith',
+        'birthDate' => '1990-01-01',
+        'profile' => ['@key' => 'test_profile'],
         'address1' => [
             ['code' => ['@key' => 'CARE/OF'], 'data' => 'Care of Test'],
             ['code' => ['@key' => 'PHONE'], 'data' => '1234567890'],
@@ -105,7 +107,7 @@ it('authenticates user successfully', function () {
 
     $data = ['barcode' => '12345', 'password' => 'test_pass'];
     $response = $this->service->userAuth($data);
-
+    
     expect($response)
         ->toBeObject()
         ->firstName->toBe('John')

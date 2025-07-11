@@ -12,6 +12,8 @@ return [
     'patron_endpoint' => env('PATRON_ENDPOINT', 'patron_endpoint'),
     'start_barcode' => env('START_BARCODE', 'start_barcode'),
     'barcode_prefix' => env('BARCODE_PREFIX', 'barcode_prefix'),
+    'start_digital_barcode' => env('START_DIGITAL_BARCODE', 'start_digital_barcode'),
+    'digital_barcode_prefix' => env('DIGITAL_BARCODE_PREFIX', 'digital_barcode_prefix'),
     'barcode_url' => env('BARCODE_URL', 'barcode_url'),
     'user_auth' => env('USER_AUTH', 'user_auth'),
     'rate_limit' => env('RATE_LIMIT', 'rate_limit'),
