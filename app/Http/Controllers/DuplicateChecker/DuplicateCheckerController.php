@@ -140,7 +140,7 @@ class DuplicateCheckerController extends Controller
 
             // Send welcome email
             $this->sendWelcomeEmail($data);
-            Log::channel('slack')->info('Record added successfully', [
+            Log::channel('slack')->info('Record added successfully.', [
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
