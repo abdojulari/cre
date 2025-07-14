@@ -111,10 +111,12 @@ class DuplicateCheckerController extends Controller
         }
         
         // if there is no duplicate, generate the barcode
+        
         $barcodeService = $this->barcodeGeneratorService->generate();
         $responseData = json_decode($barcodeService->getContent(), true);  // Decodes as an associative array
         $barcode = $responseData['barcode'];
-        $data['barcode'] = $barcode;
+        
+        $data['barcode'] = $data['source'] === 'OLR' ? $barcode : $data['barcode'];
         // Transform the data
         $transformedData = $this->transformer->transform($data, $data['source']);
        
