@@ -19,7 +19,16 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://cam-dev.epl.ca','https://cam.epl.ca','https://epl-cam.epl.ca' ,'http://localhost:4500', 'https://cam-staging.epl.ca'],
+    'allowed_origins' => [
+        'https://cam-dev.epl.ca',
+        'https://cam.epl.ca',
+        'https://epl-cam.epl.ca',
+        'http://localhost:4500',
+        'https://cam-staging.epl.ca',
+        'https://epl-rp-staging.epl.ca',
+        'https://epl-rp.epl.ca',
+        'http://localhost:4200',
+    ],
 
     'allowed_origins_patterns' => [],
 

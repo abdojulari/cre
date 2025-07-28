@@ -37,3 +37,4 @@ Route::get('/test-slack-notification', function () {
     return response()->json(['message' => 'Slack notification sent!']);
 });
 Route::post('/quick-duplicate-check', [DuplicateCheckerController::class, 'quickDuplicateCheck']);
+Route::post('/override-status-check', [DuplicateCheckerController::class, 'overrideStatusCheck']);

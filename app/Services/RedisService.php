@@ -58,4 +58,9 @@ class RedisService
             return false;
         }
     }
+
+    public function delete(string $key)
+    {
+        return $this->redis->del($key);
+    }
 }

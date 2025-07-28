@@ -99,6 +99,11 @@ class DuplicateCheckerController extends Controller
         }
         // Fuzzy logic check
         $duplicate = $this->duplicateCheckerService->retrieveDuplicateUsingCache($data, $redis);
+        // check for override status & source 
+        // create an endpoint to send the override status to the method  
+        // if there is no duplicate, generate the barcode
+        
+       
         if ($duplicate) {
             Log::channel('slack')->alert('Duplicate record found with fuzzy logic', [
                 'duplicate' => $duplicate,
@@ -108,56 +113,27 @@ class DuplicateCheckerController extends Controller
             return response()->json([
                 'message' => 'Duplicate record found with fuzzy logic.',
             ], 409);
+
         }
         
-        // if there is no duplicate, generate the barcode
         
         $barcodeService = $this->barcodeGeneratorService->generate();
         $responseData = json_decode($barcodeService->getContent(), true);  // Decodes as an associative array
         $barcode = $responseData['barcode'];
         
         $data['barcode'] = $data['source'] === 'OLR' ? $barcode : $data['barcode'];
-        // Transform the data
-        $transformedData = $this->transformer->transform($data, $data['source']);
-       
-        // Wrap the ILS post call in try-catch block to handle errors
-        try {
-            $response = $this->externalApiService->postToILS($transformedData);
-        
-            if (!$response) {
-                // If postToILS returns null or a failure response, we handle it
-                Log::channel('slack')->error('Error posting to ILS API', [
-                    'data' => $data,
-                    'ip' => request()->ip(),
-                    'user_agent' => request()->userAgent()
-                ]);
-                return response()->json(['message' => 'Error posting to ILS API'], 500);
-            }
-            // If ILS API call was successful, proceed to update Redis
-            $duplicates[] = $data;
-            file_put_contents($path, json_encode($duplicates));
 
-            // Update Redis cache after adding the new record
-            $this->redisService->set('cre_registration_record', $duplicates);
-
-            // Send welcome email
-            $this->sendWelcomeEmail($data);
-            Log::channel('slack')->info('Record added successfully.', [
-                'ip' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
-            return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
-        } catch (\Exception $e) {
-            // If there's an error with the ILS API call, handle the exception and prevent Redis write
-            Log::error('Error posting to ILS API: ' . $e->getMessage());
-            Log::channel('slack')->error('Error posting to ILS API', [
-                'error' => $e->getMessage(),
-                'ip' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
-            return response()->json(['message' => 'Error posting to ILS API'], 500);
+        $response = $this->submitToILS($data, $duplicate, $path);
+        Log::info('Response me:', ['response' => $response]);
+        if ($response->getStatusCode() === 201) {
+            return response()->json(
+                ['message' => 'Record added successfully.', 
+                'data' => $response->original['data']
+                ], 201);
+        } else {
+            return response()->json(['message' => 'Error posting to ILS API', 'error' => $response],  500);
         }
-
+        
     }
 
     public function lpass(Request $request) {
@@ -438,50 +414,6 @@ class DuplicateCheckerController extends Controller
         return response()->json($existingData);
     }
 
-    public function getLibraryStatistics()
-    {
-        // Get data from Redis
-        $dataInRedis = $this->redisService->get('cre_registration_record');
-        
-        // If Redis data is a string, decode it
-        if (is_string($dataInRedis)) {
-            $dataInRedis = json_decode($dataInRedis, true) ?? [];
-        }
-        
-        // Ensure dataInRedis is an array
-        if (!is_array($dataInRedis)) {
-            return response()->json([
-                'message' => 'No valid data found in Redis.',
-                'statistics' => []
-            ]);
-        }
-
-        // Initialize array to store library counts
-        $libraryStats = [];
-        $totalRecords = 0;
-
-        // Count records for each library
-        foreach ($dataInRedis as $record) {
-            $library = $record['library'] ?? 'Unknown';
-            if (!isset($libraryStats[$library])) {
-                $libraryStats[$library] = 0;
-            }
-            $libraryStats[$library]++;
-            $totalRecords++;
-        }
-
-        // Sort libraries by count in descending order
-        arsort($libraryStats);
-
-        return response()->json([
-            'statistics' => [
-                'by_library' => $libraryStats,
-                'total_records' => $totalRecords,
-                'total_libraries' => count($libraryStats)
-            ]
-        ]);
-    }
-
     // quick duplicate check without using fuzzy logic
     public function quickDuplicateCheck(Request $request)
     {
@@ -537,4 +469,138 @@ class DuplicateCheckerController extends Controller
             'match' => false
         ]);
     }
+
+    // // override status check 
+    public function overrideStatusCheck(Request $request)
+    {
+        $data = $request->validate([
+            'id' => 'nullable|string',
+            'firstname' => 'required|string',
+            'lastname' => 'required|string',
+            'middlename' => 'nullable|string',
+            'dateofbirth' => 'required|date',
+            'email' => 'nullable|email',
+            'phone' => 'nullable|string',
+            'address' => 'required|string',
+            'address2' => 'nullable|string',
+            'postalcode' => 'required|string',
+            'postalcode2' => 'nullable|string',
+            'province' => 'nullable|string',
+            'province2' => 'nullable|string',
+            'password' => 'nullable|string',
+            'profile' => 'nullable|string',
+            'city' => 'required|string',
+            'city2' => 'nullable|string',
+            'barcode' => 'nullable|string',
+            'library' => 'nullable|string',
+            'careof' => 'nullable|string',
+            'category1' => 'nullable|string',
+            'category2' => 'nullable|string',
+            'category3' => 'nullable|string',
+            'category4' => 'nullable|string',
+            'category5' => 'nullable|string',
+            'category6' => 'nullable|string',
+            'createdAt' => 'nullable|date',
+            'usePreferredname' => 'nullable|boolean',
+            'preferredname' => 'nullable|string',
+            'source' => 'nullable|string',
+        ]);
+
+        $path = storage_path('app/duplicates.json');
+
+        // Create a unique identifier for this user
+        $userIdentifier = strtolower($data['firstname'] . '_' . $data['lastname'] . '_' . date('Y-m-d', strtotime($data['dateofbirth'])));
+        
+        // Save the override status to Redis with user identifier as key
+        $overrideData = [
+            'timestamp' => now()->toISOString(),
+            'user_data' => [
+                'barcode' => $data['barcode'],
+                'firstname' => $data['firstname'],
+                'lastname' => $data['lastname'],
+                'dateofbirth' => date('Y-m-d', strtotime($data['dateofbirth'])),
+                'createdAt' => now()->toISOString()
+            ]
+        ];
+        
+        $duplicate[] = $data;
+        try {
+            $response = $this->submitToILS($data, $duplicate, $path);
+            Log::info('Response me:', ['response' => $response]);
+            if ($response->getStatusCode() === 201) {
+                $this->redisService->set('override_status_' . $userIdentifier, $overrideData);
+                // Log the data
+                Log::info('Override status set:', ['identifier' => $userIdentifier, 'data' => $overrideData]);
+                return response()->json([
+                    'message' => 'Override status set successfully.',
+                    'status' => 'Duplicate allowed by the staff!',
+                    'user_identifier' => $userIdentifier
+                ], 201);
+            } else {
+                return response()->json([
+                    'message' => 'Error submitting data to ILS',
+                    'status' => 'Duplicate not allowed by the staff!',
+                    'user_identifier' => $userIdentifier
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error submitting data to ILS:', ['error' => $e->getMessage()]);
+            Log::channel('slack')->error('Error submitting data to ILS', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Error submitting data to ILS'], 500);
+        } 
+        
+    }
+
+    private function submitToILS($data, $duplicate, $path) {
+        // Transform the data
+        $transformedData = $this->transformer->transform($data, $data['source']);
+       
+        // Wrap the ILS post call in try-catch block to handle errors
+        try {
+            Log::info('Duplicate status:', ['duplicate' => $duplicate]);
+            $response = $this->externalApiService->postToILS($transformedData);
+        
+            if (!$response) {
+                // If postToILS returns null or a failure response, we handle it
+                Log::channel('slack')->error('Error posting to ILS API', [
+                    'data' => $data,
+                    'ip' => request()->ip(),
+                    'user_agent' => request()->userAgent()
+                ]);
+                return response()->json(['message' => 'Error posting to ILS API'], 500);
+            }
+            // If ILS API call was successful, proceed to update Redis
+            // Load existing duplicates from file first
+            $existingDuplicates = [];
+            if (file_exists($path)) {
+                $existingDuplicates = json_decode(file_get_contents($path), true) ?? [];
+            }
+            
+            // Append new data to existing duplicates
+            $existingDuplicates[] = $data;
+            file_put_contents($path, json_encode($existingDuplicates));
+
+            // Update Redis cache after adding the new record
+            $this->redisService->set('cre_registration_record', $existingDuplicates);
+
+            // Send welcome email
+            $this->sendWelcomeEmail($data);
+            Log::channel('slack')->info('Record added successfully.', [
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+            return response()->json(['message' => 'Record added successfully.', 'data' => $transformedData], 201);
+        } catch (\Exception $e) {
+            // If there's an error with the ILS API call, handle the exception and prevent Redis write
+            Log::error('Error posting to ILS API: ' . $e->getMessage());
+            Log::channel('slack')->error('Error posting to ILS API', [
+                'error' => $e->getMessage(),
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+            return response()->json(['message' => 'Error posting to ILS API', 'error' => $e->getMessage()],  500);
+        }
+
+    }
+
 }

@@ -20,12 +20,8 @@ class DailyAlertController extends Controller
     {
         $data = $this->redisService->get('cre_registration_record');
 
-        if (!is_array($data)) {
-            $data = json_decode($data, true);
-        }
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['error' => 'Invalid JSON data'], 400);
+        if (!is_array($data) || $data === null) {
+            return response()->json(['error' => 'No data found in Redis'], 404);
         }
 
         $duplicates = [];
@@ -68,12 +64,8 @@ class DailyAlertController extends Controller
         $barcode = $request->input('barcode');
         $data = $this->redisService->get('cre_registration_record');
 
-        if (!is_array($data)) {
-            $data = json_decode($data, true);
-        }
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['error' => 'Invalid JSON data'], 400);
+        if (!is_array($data) || $data === null) {
+            return response()->json(['error' => 'No data found in Redis'], 404);
         }
 
         $result = array_filter($data, function ($entry) use ($barcode) {
@@ -88,14 +80,9 @@ class DailyAlertController extends Controller
         // Get the data from Redis
         $data = $this->redisService->get('cre_registration_record');
 
-        // Check if the data is in JSON format, and decode it
-        if (!is_array($data)) {
-            $data = json_decode($data, true);
-        }
-
-        // Check for JSON errors
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['error' => 'Invalid JSON data'], 400);
+        // Check if the data is valid
+        if (!is_array($data) || $data === null) {
+            return response()->json(['error' => 'No data found in Redis'], 404);
         }
 
         // Format the data into the desired string format
@@ -121,12 +108,8 @@ class DailyAlertController extends Controller
     {
         $data = $this->redisService->get('cre_registration_record');
         
-        if (!is_array($data)) { 
-            $data = json_decode($data, true);
-        }
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['error' => 'Invalid JSON data'], 400);
+        if (!is_array($data) || $data === null) {
+            return response()->json(['error' => 'No data found in Redis'], 404);
         }
 
         $groupedData = [];
@@ -147,190 +130,172 @@ class DailyAlertController extends Controller
     {
         $data = $this->redisService->get('cre_registration_record');
         
-        if (!is_array($data)) {
-            $data = json_decode($data, true);
+        if (!is_array($data) || $data === null) {
+            return response()->json(['error' => 'No data found in Redis'], 404);
         }
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['error' => 'Invalid JSON data'], 400);
-        }
+        // Get filter parameters from request - ONLY if explicitly provided
+        $startDate = $request->has('start_date') ? $request->input('start_date') : null;
+        $endDate = $request->has('end_date') ? $request->input('end_date') : null;
+        $year = $request->has('year') ? $request->input('year') : null;
+        $month = $request->has('month') ? $request->input('month') : null;
+        $profile = $request->has('profile') ? $request->input('profile') : null;
+        $library = $request->has('library') ? $request->input('library') : null;
+        $filterType = $request->input('filter_type', 'all');
 
-        // Get filter parameters from request
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $year = $request->input('year');
-        $month = $request->input('month');
-        $profile = $request->input('profile');
-        $filterType = $request->input('filter_type', 'all'); // all, date_range, year, month_year, monthly
+        Log::info('Library Statistics Request:', [
+            'total_records' => count($data),
+            'request_params' => $request->all(),
+            'parsed_filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'year' => $year,
+                'month' => $month,
+                'profile' => $profile,
+                'library' => $library,
+                'filter_type' => $filterType
+            ]
+        ]);
 
         // Filter data based on parameters
-        $filteredData = $this->filterDataByDateAndProfile($data, $startDate, $endDate, $year, $month, $profile, $filterType);
+        $filteredData = $this->filterDataByDateAndProfile($data, $startDate, $endDate, $year, $month, $profile, $library, $filterType);
       
-        // Initialize statistics arrays
-        $groupedData = [];
-        $profileStats = [];
-        $libraryProfileStats = [];
+        Log::info('Filtering complete:', [
+            'original_count' => count($data),
+            'filtered_count' => count($filteredData)
+        ]);
+
         $totalRecords = count($filteredData);
+        
+        // Dashboard-style breakdown for ALL requests (filtered or not)
+        $libraryStats = [];
+        $adultCount = 0;
+        $childCount = 0;
+        
+        // Define profile categories
+        $adultProfiles = [
+            'EPL_ACCESS', 'EPL_ADULT', 'EPL_ADU01', 'EPL_ADU05', 'EPL_ADU10',
+            'EPL_CORP', 'EPL_NOVIDG', 'EPL_ONLIN', 'EPL_SELF', 'EPL_VISITR', 'EPL_TRESID'
+        ];
+        
+        $childProfiles = [
+            'EPL_JNOVG', 'EPL_JONLIN', 'EPL_JUV', 'EPL_JUV01', 'EPL_JUV05',
+            'EPL_JUV10', 'EPL_JUVIND', 'EPL_SELFJ'
+        ];
         
         // Process each record
         foreach ($filteredData as $entry) {
             $library = $entry['library'] ?? 'Unknown';
             $profile = $entry['profile'] ?? 'Unknown';
             
-            // Initialize library counts
-            if (!isset($groupedData[$library])) {
-                $groupedData[$library] = [
-                    'total' => 0,
-                    'profiles' => [
-                        'EPL_SELF' => 0,
-                        'EPL_SELFJ' => 0,
-                        'Unknown' => 0
-                    ]
-                ];
+            // Count by library
+            if (!isset($libraryStats[$library])) {
+                $libraryStats[$library] = 0;
             }
+            $libraryStats[$library]++;
             
-            // Initialize profile counts
-            if (!isset($profileStats[$profile])) {
-                $profileStats[$profile] = 0;
-            }
-            
-            // Update counts
-            $groupedData[$library]['total']++;
-            $profileStats[$profile]++;
-            
-            // Update library-specific profile counts
-            if (in_array($profile, ['EPL_SELF', 'EPL_SELFJ'])) {
-                $groupedData[$library]['profiles'][$profile]++;
-            } else {
-                $groupedData[$library]['profiles']['Unknown']++;
+            // Count adult vs child registrations
+            if (in_array($profile, $adultProfiles)) {
+                $adultCount++;
+            } elseif (in_array($profile, $childProfiles)) {
+                $childCount++;
             }
         }
-
-        // Calculate additional statistics
-        $totalLibraries = count($groupedData);
-        $totalProfiles = count($profileStats);
         
-        // Get date range statistics
-        $dateStats = [
-            'earliest_record' => null,
-            'latest_record' => null,
-            'records_by_month' => []
-        ];
+        // Sort libraries by total count (descending)
+        arsort($libraryStats);
+        
+        // Get top 3 libraries
+        $top3Libraries = array_slice($libraryStats, 0, 3, true);
 
-        foreach ($filteredData as $entry) {
-            if (isset($entry['createdAt'])) {
-                $date = new \DateTime($entry['createdAt']);
-                $monthYear = $date->format('Y-m');
-                
-                if (!isset($dateStats['records_by_month'][$monthYear])) {
-                    $dateStats['records_by_month'][$monthYear] = 0;
-                }
-                $dateStats['records_by_month'][$monthYear]++;
-                
-                // Update earliest and latest dates
-                if ($dateStats['earliest_record'] === null || $date < new \DateTime($dateStats['earliest_record'])) {
-                    $dateStats['earliest_record'] = $entry['createdAt'];
-                }
-                if ($dateStats['latest_record'] === null || $date > new \DateTime($dateStats['latest_record'])) {
-                    $dateStats['latest_record'] = $entry['createdAt'];
-                }
-            }
-        }
-
-        // Sort libraries by total count
-        uasort($groupedData, function($a, $b) {
-            return $b['total'] <=> $a['total'];
-        });
-
-        // Sort profile stats by count
-        arsort($profileStats);
-
-        // Sort monthly stats by date
-        ksort($dateStats['records_by_month']);
-
-        $statistics = [
-            'statistics' => [
-                'by_library' => $groupedData,
-                'by_profile' => $profileStats,
-                'date_statistics' => $dateStats,
-                'summary' => [
-                    'total_records' => $totalRecords,
-                    'total_libraries' => $totalLibraries,
-                    'total_profiles' => $totalProfiles,
-                    'profile_distribution' => [
-                        'EPL_SELF' => $profileStats['EPL_SELF'] ?? 0,
-                        'EPL_SELFJ' => $profileStats['EPL_SELFJ'] ?? 0,
-                        'Other' => array_sum($profileStats) - (($profileStats['EPL_SELF'] ?? 0) + ($profileStats['EPL_SELFJ'] ?? 0))
-                    ]
-                ],
-                'filters_applied' => [
+        // Dashboard statistics response
+        $dashboard = [
+            'dashboard' => [
+                'total_registrations' => $totalRecords,
+                'by_branch' => count($libraryStats),
+                'adult_registrations' => $adultCount,
+                'child_registrations' => $childCount,
+                'registrations_by_branch' => $libraryStats,
+                'top_3_branches' => $top3Libraries,
+                'filters_applied' => array_filter([
                     'start_date' => $startDate,
                     'end_date' => $endDate,
                     'year' => $year,
                     'month' => $month,
+                    'library' => $library,
                     'profile' => $profile,
                     'filter_type' => $filterType
-                ]
+                ], function($value) { return $value !== null; })
             ]
         ];
 
-        return response()->json($statistics);
+        return response()->json($dashboard);
     }
 
     /**
      * Filter data based on date and profile parameters
      */
-    private function filterDataByDateAndProfile($data, $startDate, $endDate, $year, $month, $profile, $filterType)
+    private function filterDataByDateAndProfile($data, $startDate, $endDate, $year, $month, $profile, $library, $filterType)
     {
-        return array_filter($data, function ($entry) use ($startDate, $endDate, $year, $month, $profile, $filterType) {
-            // Filter by profile if specified
-            if ($profile && isset($entry['profile']) && $entry['profile'] !== $profile) {
+        return array_filter($data, function ($entry) use ($startDate, $endDate, $year, $month, $profile, $library, $filterType) {
+            // Filter by profile ONLY if explicitly provided
+            if ($profile !== null && isset($entry['profile']) && $entry['profile'] !== $profile) {
                 return false;
             }
 
-            // If no date filtering is requested, return all records
-            if ($filterType === 'all' && !$startDate && !$endDate && !$year && !$month) {
+            // Filter by library ONLY if explicitly provided
+            if ($library !== null && isset($entry['library']) && $entry['library'] !== $library) {
+                return false;
+            }
+
+            // If no filtering is requested, return all records
+            if ($filterType === 'all' && $startDate === null && $endDate === null && $year === null && $month === null) {
                 return true;
             }
 
-            // Check if entry has createdAt field
-            if (!isset($entry['createdAt'])) {
-                return false;
+            // For date-based filtering, check if entry has createdAt field
+            if (($year !== null || $month !== null || $startDate !== null || $endDate !== null)) {
+                if (!isset($entry['createdAt'])) {
+                    return false; // Skip records without date when date filtering is requested
+                }
+
+                try {
+                    $entryDate = new \DateTime($entry['createdAt']);
+                } catch (\Exception $e) {
+                    return false; // Skip invalid dates
+                }
+
+                // Apply different filter types
+                switch ($filterType) {
+                    case 'date_range':
+                        return $this->filterByDateRange($entryDate, $startDate, $endDate);
+                    
+                    case 'year':
+                        return $this->filterByYear($entryDate, $year);
+                    
+                    case 'month_year':
+                    case 'month':
+                        return $this->filterByMonthYear($entryDate, $year, $month);
+                    
+                    case 'monthly':
+                        return $this->filterByMonthly($entryDate, $startDate, $endDate);
+                    
+                    default:
+                        // Default behavior: apply all filters if provided
+                        if ($startDate !== null && $endDate !== null && !$this->filterByDateRange($entryDate, $startDate, $endDate)) {
+                            return false;
+                        }
+                        if ($year !== null && !$this->filterByYear($entryDate, $year)) {
+                            return false;
+                        }
+                        if ($month !== null && $year !== null && !$this->filterByMonthYear($entryDate, $year, $month)) {
+                            return false;
+                        }
+                        return true;
+                }
             }
 
-            try {
-                $entryDate = new \DateTime($entry['createdAt']);
-            } catch (\Exception $e) {
-                return false; // Skip invalid dates
-            }
-
-            // Apply different filter types
-            switch ($filterType) {
-                case 'date_range':
-                    return $this->filterByDateRange($entryDate, $startDate, $endDate);
-                
-                case 'year':
-                    return $this->filterByYear($entryDate, $year);
-                
-                case 'month_year':
-                    return $this->filterByMonthYear($entryDate, $year, $month);
-                
-                case 'monthly':
-                    return $this->filterByMonthly($entryDate, $startDate, $endDate);
-                
-                default:
-                    // Default behavior: apply all filters if provided
-                    if ($startDate && $endDate && !$this->filterByDateRange($entryDate, $startDate, $endDate)) {
-                        return false;
-                    }
-                    if ($year && !$this->filterByYear($entryDate, $year)) {
-                        return false;
-                    }
-                    if ($month && $year && !$this->filterByMonthYear($entryDate, $year, $month)) {
-                        return false;
-                    }
-                    return true;
-            }
+            return true; // Include record if no date filtering was requested
         });
     }
 

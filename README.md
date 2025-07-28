@@ -182,19 +182,17 @@ Log::channel('slack')->debug('Detailed debug information');
 
 
 # Date range filtering
-GET /api/library-statistics?start_date=2024-01-01&end_date=2024-12-31&filter_type=date_range
+# Get all statistics for 2025
+GET /api/library-statistics?year=2025&filter_type=year
 
-# Year only
-GET /api/library-statistics?year=2024&filter_type=year
+# Get statistics for July 2025
+GET /api/library-statistics?year=2025&month=7&filter_type=month
 
-# Month and year
-GET /api/library-statistics?year=2024&month=3&filter_type=month_year
+# Get statistics for date range
+GET /api/library-statistics?start_date=2025-01-01&end_date=2025-07-31&filter_type=date_range
 
-# Profile filtering
-GET /api/library-statistics?profile=EPL_SELF
-
-# Combined filtering
-GET /api/library-statistics?start_date=2024-01-01&end_date=2024-03-31&profile=EPL_SELFJ
+# Get statistics for specific library
+GET /api/library-statistics?library=EPLCSD&year=2025
 
 
 ### Example
