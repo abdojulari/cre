@@ -460,14 +460,14 @@ class DuplicateCheckerController extends Controller
                         'message' => 'Record already exists.',
                         'match' => true,
                         'matched_record' => $record
-                    ], 409);
+                    ], 200);
                 }
             }
             Log::info('No duplicate record found.');
             return response()->json([
                 'message' => 'No duplicate record found.',
                 'match' => false
-            ]);
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Error checking for duplicates:', ['error' => $e->getMessage()]);
             Log::channel('slack')->error('Error checking for duplicates', [
@@ -478,7 +478,6 @@ class DuplicateCheckerController extends Controller
             return response()->json(['message' => 'Error checking for duplicates'], 500);
         }
 
-        
     }
 
     // // override status check 
