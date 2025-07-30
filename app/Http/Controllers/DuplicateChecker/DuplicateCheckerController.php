@@ -440,34 +440,45 @@ class DuplicateCheckerController extends Controller
         // Format the dateofbirth to match the format in Redis
         $formattedDateOfBirth = date('Y-m-d', strtotime($data['dateofbirth']));
 
-        // Check each record in Redis for matches
-        foreach ($dataInRedis as $record) {
-            $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
-            
-            // Check for exact matches
-            if (
-                strtolower($record['firstname']) === strtolower($data['firstname']) &&
-                strtolower($record['lastname']) === strtolower($data['lastname']) &&
-                $recordDateOfBirth === $formattedDateOfBirth &&
-                (
-                    // If middlename is provided, check it too
-                    empty($data['middlename']) ||
-                    (isset($record['middlename']) && strtolower($record['middlename']) === strtolower($data['middlename']))
-                )
-            ) {
-                Log::info('Duplicate record found:', ['record' => $record]);
-                return response()->json([
-                    'message' => 'Record already exists.',
-                    'match' => true,
-                    'matched_record' => $record
-                ], 409);
+        try {
+            foreach ($dataInRedis as $record) {
+                $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
+                
+                // Check for exact matches
+                if (
+                    strtolower($record['firstname']) === strtolower($data['firstname']) &&
+                    strtolower($record['lastname']) === strtolower($data['lastname']) &&
+                    $recordDateOfBirth === $formattedDateOfBirth &&
+                    (
+                        // If middlename is provided, check it too
+                        empty($data['middlename']) ||
+                        (isset($record['middlename']) && strtolower($record['middlename']) === strtolower($data['middlename']))
+                    )
+                ) {
+                    Log::info('Duplicate record found:', ['record' => $record]);
+                    return response()->json([
+                        'message' => 'Record already exists.',
+                        'match' => true,
+                        'matched_record' => $record
+                    ], 409);
+                }
             }
+            Log::info('No duplicate record found.');
+            return response()->json([
+                'message' => 'No duplicate record found.',
+                'match' => false
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error checking for duplicates:', ['error' => $e->getMessage()]);
+            Log::channel('slack')->error('Error checking for duplicates', [
+                'error' => $e->getMessage(),
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+            return response()->json(['message' => 'Error checking for duplicates'], 500);
         }
-        Log::info('No duplicate record found.');
-        return response()->json([
-            'message' => 'No duplicate record found.',
-            'match' => false
-        ]);
+
+        
     }
 
     // // override status check 
