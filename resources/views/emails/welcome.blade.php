@@ -72,15 +72,22 @@
         </p>
     </div>
 
-    <p>This library card gives you <b>immediate access</b> to all our <a href="https://www.epl.ca/resources/" target="_blank">online resources</a> 
-    for the <b>next 45 days</b>.</p>
-  
+    @if($source == 'OLR')
+        <p>This library card gives you <b>immediate access</b> to all our <a href="https://www.epl.ca/resources/" target="_blank">online resources</a> 
+        for the <b>next 45 days</b>. You can access these resources by logging into your account with your library card number and PIN.</p>
+    @else
+    <p>This library card gives you <b>immediate access</b> to all our <a href="https://www.epl.ca/resources/" target="_blank">online resources</a>. </b>
+    <p>You can access these resources by logging into your account with your library card number and PIN.</p>
+    @endif
+
+    @if($source == 'OLR')
     <p>
         To continue enjoying EPL’s amazing resources after this period, please visit any 
         <a href="https://epl.bibliocommons.com/v2/locations" target="_blank">EPL location</a> 
         with proof of your Edmonton address and a valid picture ID. <strong>When you visit us to extend your 
         membership in branch, you’ll also receive a FREE tote bag!</strong> 
     </p>
+    
     <p>In the meantime, start exploring!</p>
     <ul>
         <li> <a href="https://epl.bibliocommons.com/user/registration" target="_blank">Log into your account</a> to place holds on physical items, access thousands of books, magazines, 
@@ -89,6 +96,7 @@
         <li>Check out our <a href="https://www.epl.ca/borrowing-guide/" target="_blank">Borrowing Guide</a>, to learn about borrowing and hold limits.</li>
         <li>Download our <a href="https://www.epl.ca/epl-app/" target="_blank">EPL App</a> for even more convenient access to our services and resources.</li>
     </ul>
+    @endif
     
     <p>We’re thrilled to have you with us and look forward to seeing you soon at an EPL location.</p>
     

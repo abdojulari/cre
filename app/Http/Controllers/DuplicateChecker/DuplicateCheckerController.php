@@ -296,6 +296,7 @@ class DuplicateCheckerController extends Controller
                 $data['firstname'],
                 $data['lastname'],
                 $data['barcode'],
+                $data['source'],
                 $expiryDate
             ));
         } catch (\Exception $e) {

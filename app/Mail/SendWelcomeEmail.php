@@ -17,15 +17,16 @@ class SendWelcomeEmail extends Mailable
     public $lastname;
     public $barcode;
     public $expiryDate;
-
+    public $source;
     /**
      * Create a new message instance.
      */
-    public function __construct($firstname, $lastname, $barcode, $expiryDate)
+    public function __construct($firstname, $lastname, $barcode, $source, $expiryDate)
     {
         $this->firstname = $firstname;
         $this->lastname = $lastname;
         $this->barcode = $barcode;
+        $this->source = $source;
         $this->expiryDate = $expiryDate;
     }
 
