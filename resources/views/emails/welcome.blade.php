@@ -77,7 +77,7 @@
         for the <b>next 45 days</b>. You can access these resources by logging into your account with your library card number and PIN.</p>
     @else
     <p>This library card gives you <b>immediate access</b> to all our <a href="https://www.epl.ca/resources/" target="_blank">online resources</a>. </b>
-    <p>You can access these resources by logging into your account with your library card number and PIN.</p>
+    <p>You can access these resources by <a href="https://epl.bibliocommons.com/user/registration" target="_blank"> logging into your account</a> with your library card number and PIN.</p>
     @endif
 
     @if($source == 'OLR')
@@ -98,7 +98,11 @@
     </ul>
     @endif
     
+    @if($source == 'OLR')
     <p>We’re thrilled to have you with us and look forward to seeing you soon at an EPL location.</p>
+    @else
+    <p>We’re thrilled to have you with us.</p>
+    @endif
     
     <div class="footer">
         <p>The EPL team</p>

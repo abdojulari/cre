@@ -169,11 +169,13 @@ class DuplicateCheckerController extends Controller
             'branch' => 'nullable|string',
             'notes' => 'nullable|string',
             'createdAt' => 'nullable|date',
+            'source' => 'nullable|string',
         ]);
     
         // Add timestamps
         $data['createdAt'] = now()->format('Y-m-d');
         $data['modifiedAt'] = now()->format('Y-m-d');
+        $data['source'] = 'LPASS';
         
         $data['key'] = $this->externalApiService->retrieveILSData($data)['@key'] ?? null;
     
