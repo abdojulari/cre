@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 Route::post('/duplicates', [DuplicateCheckerController::class, 'store'])->middleware(['client','throttle:duplicates', 'sanctum-auth']);
 Route::post('/lpass', [DuplicateCheckerController::class, 'lpass'])->middleware(['client','sanctum-auth']);
 Route::get('/barcode', [BarcodeGeneratorController::class, 'create'])->middleware('client');
+Route::get('/barcode/statistics', [BarcodeGeneratorController::class, 'getStatistics'])->middleware('client');
 Route::get('/accuracy', [DuplicateCheckerController::class, 'evaluateDuplicates']);
 Route::post('/customer-auth', [UserAuthenticationController::class, 'authenticateUser'])->middleware(['client', 'sanctum-auth']);
 Route::post('/login', [AuthController::class, 'login']);

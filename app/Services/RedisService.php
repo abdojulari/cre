@@ -63,4 +63,71 @@ class RedisService
     {
         return $this->redis->del($key);
     }
+
+    /**
+     * Add a member to a Redis set (for barcode tracking)
+     *
+     * @param string $setKey
+     * @param string $member
+     * @return int
+     */
+    public function addToSet(string $setKey, string $member)
+    {
+        try {
+            return $this->redis->sadd($setKey, $member);
+        } catch (\Exception $e) {
+            Log::error("Error adding to Redis set: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+    /**
+     * Check if a member exists in a Redis set
+     *
+     * @param string $setKey
+     * @param string $member
+     * @return bool
+     */
+    public function isInSet(string $setKey, string $member): bool
+    {
+        try {
+            return (bool) $this->redis->sismember($setKey, $member);
+        } catch (\Exception $e) {
+            Log::error("Error checking Redis set membership: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+    /**
+     * Get the count of members in a Redis set
+     *
+     * @param string $setKey
+     * @return int
+     */
+    public function getSetCount(string $setKey): int
+    {
+        try {
+            return $this->redis->scard($setKey);
+        } catch (\Exception $e) {
+            Log::error("Error getting Redis set count: {$e->getMessage()}");
+            return 0;
+        }
+    }
+
+    /**
+     * Remove a member from a Redis set
+     *
+     * @param string $setKey
+     * @param string $member
+     * @return int
+     */
+    public function removeFromSet(string $setKey, string $member)
+    {
+        try {
+            return $this->redis->srem($setKey, $member);
+        } catch (\Exception $e) {
+            Log::error("Error removing from Redis set: {$e->getMessage()}");
+            return false;
+        }
+    }
 }

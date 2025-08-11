@@ -291,7 +291,7 @@ class DuplicateCheckerController extends Controller
         $currentDate->modify('+45 days');
 
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
-        $expiryDate = $currentDate->format('Y-m-d');
+        $expiryDate = $data['source'] === 'OLR' ? $currentDate->format('Y-m-d') : date('Y-m-d', strtotime($data['expirydate']));
 
         try {
             Mail::to($data['email'])->send(new SendWelcomeEmail(
