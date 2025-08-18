@@ -57,6 +57,7 @@ class DuplicateCheckerController extends Controller
             'province' => 'nullable|string',
             'province2' => 'nullable|string',
             'password' => 'nullable|string',
+            'expirydate' => 'nullable|date',
             'profile' => 'nullable|string',
             'city' => 'required|string',
             'city2' => 'nullable|string',
@@ -78,7 +79,10 @@ class DuplicateCheckerController extends Controller
         $currentDate = new \DateTime();
         $currentDate->modify('+45 days');
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
-        $expiryDate = $currentDate->format('Y-m-d');
+        
+        $expiryDate = isset($data['expirydate']) && $data['source'] !== 'OLR' 
+    ? date('Y-m-d', strtotime($data['expirydate'])) 
+    : $currentDate->format('Y-m-d');
         $data['expirydate'] = $expiryDate;
         // convert dateofbirth to yyyy-mm-dd format
         $data['dateofbirth'] = date('Y-m-d', strtotime($data['dateofbirth']));
@@ -291,7 +295,7 @@ class DuplicateCheckerController extends Controller
         $currentDate->modify('+45 days');
 
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
-        $expiryDate = $data['source'] === 'OLR' ? $currentDate->format('Y-m-d') : date('Y-m-d', strtotime($data['expirydate']));
+        $expiryDate = $data['source'] === 'OLR' ? $currentDate->format('Y-m-d')  || !isset($data['expirydate']) : date('Y-m-d', strtotime($data['expirydate']));
 
         try {
             Mail::to($data['email'])->send(new SendWelcomeEmail(
@@ -514,12 +518,21 @@ class DuplicateCheckerController extends Controller
             'category5' => 'nullable|string',
             'category6' => 'nullable|string',
             'createdAt' => 'nullable|date',
+            'expirydate' => 'nullable|date',
             'usePreferredname' => 'nullable|boolean',
             'preferredname' => 'nullable|string',
             'source' => 'nullable|string',
         ]);
 
         $path = storage_path('app/duplicates.json');
+        $currentDate = new \DateTime();
+        $currentDate->modify('+5 years');
+        // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
+    
+        $expiryDate = ($data['source'] === 'OLR' || !isset($data['expirydate'])) 
+        ? $currentDate->format('Y-m-d') 
+        : date('Y-m-d', strtotime($data['expirydate'])); 
+        $data['expirydate'] = $expiryDate;
 
         // Create a unique identifier for this user
         $userIdentifier = strtolower($data['firstname'] . '_' . $data['lastname'] . '_' . date('Y-m-d', strtotime($data['dateofbirth'])));
