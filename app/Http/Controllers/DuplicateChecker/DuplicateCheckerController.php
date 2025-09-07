@@ -184,7 +184,7 @@ class DuplicateCheckerController extends Controller
         $data['key'] = $this->externalApiService->retrieveILSData($data)['@key'] ?? null;
     
         try {
-            // Get Redis data and handle the case where it might be null
+            // 
             $ilsData = $this->externalApiService->retrieveILSData($data);
             // Initialize transformed data as an empty array to handle null case
             $transformedData = [];

@@ -68,13 +68,13 @@
         <p>
             <strong>Name:</strong> {{ $firstname }} {{ $lastname }}<br>
             <strong>Card Number:</strong> {{ $barcode }} <br>
-            @if($source !== 'CRP')
+            @if($source != 'CRP')
             <strong>Expiry Date:</strong> {{ $expiryDate }}
             @endif
         </p>
     </div>
 
-    @if($source === 'OLR')
+    @if($source == 'OLR')
         <p>This library card gives you <b>immediate access</b> to all our <a href="https://www.epl.ca/resources/" target="_blank">online resources</a> 
         for the <b>next 45 days</b>. You can access these resources by logging into your account with your library card number and PIN.</p>
     @elseif(!in_array($source, ['CRP', 'OLR']))
@@ -103,7 +103,7 @@
     </ul>
     @endif
 
-    @if($source === 'OLR')
+    @if($source == 'OLR')
     <p>
         To continue enjoying EPL’s amazing resources after this period, please visit any 
         <a href="https://epl.bibliocommons.com/v2/locations" target="_blank">EPL location</a> 
@@ -121,7 +121,7 @@
     </ul>
     @endif
     
-    @if($source === 'OLR')
+    @if($source == 'OLR')
     <p>We’re thrilled to have you with us and look forward to seeing you soon at an EPL location.</p>
     @else
     <p>We’re thrilled to have you with us.</p>
