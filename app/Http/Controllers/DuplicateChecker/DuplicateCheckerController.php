@@ -80,9 +80,12 @@ class DuplicateCheckerController extends Controller
         $currentDate->modify('+45 days');
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
         
-        $expiryDate = isset($data['expirydate']) && $data['source'] !== 'OLR' 
-    ? date('Y-m-d', strtotime($data['expirydate'])) 
-    : $currentDate->format('Y-m-d');
+    //     $expiryDate = isset($data['expirydate']) && $data['source'] !== 'OLR' 
+    // ? date('Y-m-d', strtotime($data['expirydate'])) 
+    // : $currentDate->format('Y-m-d');
+        if ($data['source'] === 'OLR') {
+            $expiryDate = $currentDate->format('Y-m-d');
+        }
         $data['expirydate'] = $expiryDate;
         // convert dateofbirth to yyyy-mm-dd format
         $data['dateofbirth'] = date('Y-m-d', strtotime($data['dateofbirth']));
@@ -295,8 +298,14 @@ class DuplicateCheckerController extends Controller
         $currentDate->modify('+45 days');
 
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
-        $expiryDate = $data['source'] === 'OLR' ? $currentDate->format('Y-m-d')  || !isset($data['expirydate']) : date('Y-m-d', strtotime($data['expirydate']));
+        //$expiryDate = $data['source'] === 'OLR' ? $currentDate->format('Y-m-d')  || !isset($data['expirydate']) : date('Y-m-d', strtotime($data['expirydate']));
 
+        if ($data['source'] === 'OLR') {
+            $expiryDate = $currentDate->format('Y-m-d');
+        } elseif ($data['source'] === 'LPASS' && isset($data['expirydate'])) {
+            $expiryDate = date('Y-m-d', strtotime($data['expirydate']));
+        }
+        
         try {
             Mail::to($data['email'])->send(new SendWelcomeEmail(
                 $data['firstname'],
