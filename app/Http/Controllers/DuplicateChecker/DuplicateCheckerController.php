@@ -80,13 +80,11 @@ class DuplicateCheckerController extends Controller
         $currentDate->modify('+45 days');
         // Format the date if needed (e.g., 'Y-m-d' for '2024-03-01')
         
-    //     $expiryDate = isset($data['expirydate']) && $data['source'] !== 'OLR' 
-    // ? date('Y-m-d', strtotime($data['expirydate'])) 
-    // : $currentDate->format('Y-m-d');
         if ($data['source'] === 'OLR') {
             $expiryDate = $currentDate->format('Y-m-d');
         }
-        $data['expirydate'] = $expiryDate;
+       
+        $data['expirydate'] = $expiryDate ?? null;
         // convert dateofbirth to yyyy-mm-dd format
         $data['dateofbirth'] = date('Y-m-d', strtotime($data['dateofbirth']));
         $data['createdAt'] = now()->format('Y-m-d');
