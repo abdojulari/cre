@@ -111,15 +111,38 @@ class ExternalApiService
             if ($response->successful()) {
                 return $response->json();
             }
+            Log::error('ILS barcode lookup failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'barcode' => $barcode,
+                'url' => $barcode_url . $barcode
+            ]);
+            return null;
         } catch (\Exception $e) {
             Log::error('Error getting the response from Barcode: ' . $e->getMessage());
-            return response()->json(['message' => 'Error getting response from staff url'], 500);
+            return null;
         }
     }
     // update request to ILS API
     public function updateToILS($data) {
         $sessionToken = $this->getSessionToken();
-        $key = $this->retrieveILSData($data)['@key'];
+        // Prefer key supplied in payload; fallback to lookup by barcode
+        $key = $data['@key'] ?? ($data['key'] ?? null);
+        if (!$key) {
+            $lookup = $this->retrieveILSData($data);
+            if (is_array($lookup) && isset($lookup['@key'])) {
+                $key = $lookup['@key'];
+            }
+        }
+
+        // If no key after lookup, attempt create instead of update
+        if (!$key) {
+            Log::warning('No patron key found for update; attempting create', [
+                'barcode' => $data['barcode'] ?? null
+            ]);
+            return $this->postToILS($data);
+        }
+
         $url = config('cre.ils_base_url') . config('cre.patron_endpoint') .'/key/'.$key;
         try {          
             $response = Http::withHeaders([
@@ -133,9 +156,16 @@ class ExternalApiService
             if ($response->successful()) {
                 return $response->json();
             }
+            Log::error('ILS Update Error', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'url' => $url,
+                'request_data' => $data
+            ]);
+            return null;
         } catch (\Exception $e) {
             Log::error('Error updating to ILS API: ' . $e->getMessage());
-            return response()->json(['message' => 'Error updating to ILS API'], 500);
+            return null;
         }
     }
 

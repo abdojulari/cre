@@ -141,157 +141,8 @@ class DuplicateCheckerController extends Controller
         
     }
 
-    // public function lpass(Request $request) {
-    //     // Validate incoming request data
-    //     $data = $request->validate([
-    //         'id' => 'nullable|string',
-    //         'preferredname' => 'nullable|boolean',
-    //         'firstname' => 'required|string',
-    //         'lastname' => 'required|string',
-    //         'middlename' => 'nullable|string',
-    //         'dateofbirth' => 'required|date',
-    //         'email' => 'required|email',
-    //         'phone' => 'required|string',
-    //         'country' => 'required|string',
-    //         'address' => 'required|string',
-    //         'postalcode' => 'required|string',
-    //         'province' => 'nullable|string',
-    //         'password' => 'nullable|string',
-    //         'profile' => 'nullable|string',
-    //         'city' => 'required|string',
-    //         'expirydate' => 'required|date',
-    //         'barcode' => 'required|string',
-    //         'library' => 'nullable|string',
-    //         'careof' => 'nullable|string',
-    //         'category1' => 'nullable|string',
-    //         'category2' => 'nullable|string',
-    //         'category3' => 'nullable|string',
-    //         'category4' => 'nullable|string',
-    //         'category5' => 'nullable|string',
-    //         'category6' => 'nullable|string',
-    //         'type' => 'nullable|string',
-    //         'status' => 'nullable|string',
-    //         'branch' => 'nullable|string',
-    //         'notes' => 'nullable|string',
-    //         'createdAt' => 'nullable|date',
-    //         'source' => 'nullable|string',
-    //     ]);
-    
-    //     // Add timestamps
-    //     $data['createdAt'] = now()->format('Y-m-d');
-    //     $data['modifiedAt'] = now()->format('Y-m-d');
-    //     $data['source'] = 'LPASS';
-        
-    //     $data['key'] = $this->externalApiService->retrieveILSData($data)['@key'] ?? null;
-    
-    //     try {
-    //         // 
-    //         $ilsData = $this->externalApiService->retrieveILSData($data);
-    //         // Initialize transformed data as an empty array to handle null case
-    //         $transformedData = [];
-    //         // If ILS data exists, transform it
-    //         if ($ilsData !== null) {
-    //             $clean = json_encode($this->transformer->transformUserData($ilsData), JSON_PRETTY_PRINT);
-    //             // Initialize the array of records
-    //             $dataFromILS = [];
-    
-    //             // If Redis data exists and is already an array, use it directly
-    //             if ($clean !== null) {
-    //                 if (is_array($clean)) {
-    //                     $dataFromILS = $clean;
-    //                 } elseif (is_string($clean)) {
-    //                     $dataFromILS = json_decode($clean, true) ?? [];
-    //                 }
-    //             }
-    
-    //             // Initialize flags for checking existence
-    //             $recordExists = false;
-    //             $existingData = null;
-    
-    //             // Check if the ILS data exists (not null)
-    //             if ($ilsData !== null) {
-    //                 // Loop through the existing records and check for matching barcode and dateofbirth
-    //                 foreach ($dataFromILS as $record) {
-    //                     if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
-    //                         $recordExists = true;
-    //                         $existingData = $record;
-    //                         break;
-    //                     }
-    //                 }
-    
-    //                 if ($recordExists) {
-    //                     // If record exists, compare it with the new data
-    //                     if ($this->transformer->dataHasChanged($existingData, $data)) {
-    //                         // Update the record in the existing data array
-    //                         foreach ($dataFromILS as &$record) {
-    //                             if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
-    //                                 $record = $data;
-    //                                 break;
-    //                             }
-    //                         }
-    
-    //                         try {
-    //                             $transformedData = $this->transformer->transform($data, 'LPASS');
-    //                             $response = $this->externalApiService->updateToILS($transformedData);
-    //                             if (!$response) {
-    //                                 return response()->json(['message' => 'Error updating ILS record'], 500);
-    //                             }
-    //                             // Always encode as JSON before saving
-    //                             Log::info('Updated record in ILS:', ['updatedData' => $data]);
-    //                             return response()->json(['message' => 'Record updated to ILS', 'data' => $transformedData], 200);
-    //                         } catch (\Exception $e) {
-    //                             Log::error('Error updating ILS: ' . $e->getMessage());
-    //                             Log::channel('slack')->error('Error updating ILS - LPASS', [
-    //                                 'Erro Message' => $e->getMessage(),
-    //                                 'ip' => request()->ip(),
-    //                                 'trace' => $e->getTraceAsString(),
-    //                                 'user_agent' => request()->userAgent()
-    //                             ]);
-    //                             return response()->json(['message' => 'Error updating ILS'], 500);
-    //                         }
-    //                     } else {
-    //                         Log::info('No changes detected for record:', ['data' => $data]);
-    //                         return response()->json(['message' => 'No changes detected. Record unchanged']);
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         if ($ilsData === null) {
-    //             // Transform and post new data when ILS data is null (i.e., it doesn't exist)
-    //             $transformedData = $this->transformer->transform($data, 'LPASS');
-    //             $response = $this->externalApiService->postToILS($transformedData);
-
-    //             // email the data to the user
-    //             $this->sendWelcomeEmail($data);
-            
-    //             if (!$response) {
-    //                 return response()->json(['message' => 'Error posting to ILS API'], 500);
-    //             }
-    
-    //             Log::info('New record added to Redis:', ['newData' => $data]);
-    //             return response()->json(['message' => 'Record added to ILS successfully!', 'data' => $transformedData], 201);
-    //         }
-    
-    //     } catch (\Exception $e) {
-    //         Log::error('Redis operation failed:', [
-    //             'error' => $e->getMessage(),
-    //             'trace' => $e->getTraceAsString()
-    //         ]);
-    //         Log::channel('slack')->error('Redis operation failed - LPASS', [
-    //             'error' => $e->getMessage(),
-    //             'ip' => request()->ip(),
-    //             'trace' => $e->getTraceAsString(),
-    //             'user_agent' => request()->userAgent()
-    //         ]);
-    //         return response()->json(['error' => 'Failed to process request'], 500);
-    //     }
-    // }
-    
-    public function lpass(Request $request)
-{
-    try {
-        // ✅ 1. Validate incoming request data
+    public function lpass(Request $request) {
+        // Validate incoming request data
         $data = $request->validate([
             'id' => 'nullable|string',
             'preferredname' => 'nullable|boolean',
@@ -325,84 +176,119 @@ class DuplicateCheckerController extends Controller
             'createdAt' => 'nullable|date',
             'source' => 'nullable|string',
         ]);
-
-        // ✅ 2. Add timestamps and source
+    
+        // Add timestamps
         $data['createdAt'] = now()->format('Y-m-d');
         $data['modifiedAt'] = now()->format('Y-m-d');
         $data['source'] = 'LPASS';
-
-        // ✅ 3. Try to retrieve existing ILS record by barcode
-        $ilsData = $this->externalApiService->retrieveILSData(['barcode' => $data['barcode']]);
-
-        if ($ilsData !== null) {
-            // ✅ 4. Extract existing key
-            $data['key'] = $ilsData['@key'] ?? null;
-
-            // ✅ 5. Transform existing data for comparison
-            $existingData = $this->transformer->transformUserData($ilsData);
-
-            // ✅ 6. Check if data has changed
-            if ($this->transformer->dataHasChanged($existingData, $data)) {
-                // ✅ 7. Transform new data for update
-                $transformedData = $this->transformer->transform($data, 'LPASS');
-
-                // ✅ 8. Update to ILS
-                $response = $this->externalApiService->updateToILS($transformedData);
-
-                if (!$response) {
-                    return response()->json(['message' => 'Error updating ILS record'], 500);
+        
+        $data['key'] = $this->externalApiService->retrieveILSData($data)['@key'] ?? null;
+    
+        try {
+            // 
+            $ilsData = $this->externalApiService->retrieveILSData($data);
+            // Initialize transformed data as an empty array to handle null case
+            $transformedData = [];
+            // If ILS data exists, transform it
+            if ($ilsData !== null) {
+                $clean = json_encode($this->transformer->transformUserData($ilsData), JSON_PRETTY_PRINT);
+                // Initialize the array of records
+                $dataFromILS = [];
+    
+                // If data exists and is already an array, use it directly
+                if ($clean !== null) {
+                    if (is_array($clean)) {
+                        $dataFromILS = $clean;
+                    } elseif (is_string($clean)) {
+                        $dataFromILS = json_decode($clean, true) ?? [];
+                    }
                 }
-
-                Log::info('Updated record in ILS:', ['updatedData' => $data]);
-
-                return response()->json([
-                    'message' => 'Record updated to ILS',
-                    'data' => $transformedData
-                ], 200);
-            } else {
-                // ✅ No changes detected
-                Log::info('No changes detected for record:', ['data' => $data]);
-
-                return response()->json(['message' => 'No changes detected. Record unchanged']);
+    
+                // Initialize flags for checking existence
+                $recordExists = false;
+                $existingData = null;
+    
+                // Check if the ILS data exists (not null)
+                if ($ilsData !== null) {
+                    // Loop through the existing records and check for matching barcode and dateofbirth
+                    foreach ($dataFromILS as $record) {
+                        if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
+                            $recordExists = true;
+                            $existingData = $record;
+                            break;
+                        }
+                    }
+    
+                    if ($recordExists) {
+                        // If record exists, compare it with the new data
+                        if ($this->transformer->dataHasChanged($existingData, $data)) {
+                            // Update the record in the existing data array
+                            foreach ($dataFromILS as &$record) {
+                                if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
+                                    $record = $data;
+                                    break;
+                                }
+                            }
+    
+                            try {
+                                $transformedData = $this->transformer->transform($data, 'LPASS');
+                                $response = $this->externalApiService->updateToILS($transformedData);
+                                if (!$response) {
+                                    return response()->json(['message' => 'Error updating ILS record'], 500);
+                                }
+                                // Always encode as JSON before saving
+                                Log::info('Updated record in ILS:', ['updatedData' => $data]);
+                                
+                                return response()->json(['message' => 'Record updated to ILS', 'data' => $transformedData], 200);
+                            } catch (\Exception $e) {
+                                Log::error('Error updating ILS: ' . $e->getMessage());
+                                Log::channel('slack')->error('Error updating ILS - LPASS', [
+                                    'Erro Message' => $e->getMessage(),
+                                    'ip' => request()->ip(),
+                                    'trace' => $e->getTraceAsString(),
+                                    'user_agent' => request()->userAgent()
+                                ]);
+                                return response()->json(['message' => 'Error updating ILS'], 500);
+                            }
+                        } else {
+                            Log::info('No changes detected for record:', ['data' => $data]);
+                            return response()->json(['message' => 'No changes detected. Record unchanged']);
+                        }
+                    }
+                }
             }
+
+            if ($ilsData === null) {
+                // Transform and post new data when ILS data is null (i.e., it doesn't exist)
+                $transformedData = $this->transformer->transform($data, 'LPASS');
+                $response = $this->externalApiService->postToILS($transformedData);
+
+                // email the data to the user
+                $this->sendWelcomeEmail($data);
+            
+                if (!$response) {
+                    return response()->json(['message' => 'Error posting to ILS API'], 500);
+                }
+    
+                Log::info('New record added to Redis:', ['newData' => $data]);
+                return response()->json(['message' => 'Record added to ILS successfully!', 'data' => $transformedData], 201);
+            }
+    
+        } catch (\Exception $e) {
+            Log::error('Redis operation failed:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            Log::channel('slack')->error('Redis operation failed - LPASS', [
+                'error' => $e->getMessage(),
+                'ip' => request()->ip(),
+                'trace' => $e->getTraceAsString(),
+                'user_agent' => request()->userAgent()
+            ]);
+            return response()->json(['error' => 'Failed to process request'], 500);
         }
-
-        // ✅ 9. If no existing record, create a new one
-        $transformedData = $this->transformer->transform($data, 'LPASS');
-
-        $response = $this->externalApiService->postToILS($transformedData);
-
-        if (!$response) {
-            return response()->json(['message' => 'Error posting to ILS API'], 500);
-        }
-
-        // ✅ 10. Send welcome email
-        $this->sendWelcomeEmail($data);
-
-        Log::info('New record added to ILS:', ['newData' => $data]);
-
-        return response()->json([
-            'message' => 'Record added to ILS successfully!',
-            'data' => $transformedData
-        ], 201);
-    } catch (\Exception $e) {
-        // ✅ 11. Log exceptions
-        Log::error('LPASS operation failed:', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        Log::channel('slack')->error('LPASS error occurred', [
-            'error' => $e->getMessage(),
-            'ip' => request()->ip(),
-            'trace' => $e->getTraceAsString(),
-            'user_agent' => request()->userAgent()
-        ]);
-
-        return response()->json(['error' => 'Failed to process request'], 500);
     }
-}
-
+    
     // method to send welcome email used in the store method
     private function sendWelcomeEmail($data) {
         $currentDate = new \DateTime();
