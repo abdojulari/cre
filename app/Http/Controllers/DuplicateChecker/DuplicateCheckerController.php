@@ -182,11 +182,12 @@ class DuplicateCheckerController extends Controller
         $data['modifiedAt'] = now()->format('Y-m-d');
         $data['source'] = 'LPASS';
         
-        $data['key'] = $this->externalApiService->retrieveILSData($data)['@key'] ?? null;
-    
+        // Safely retrieve ILS data once and extract key if present
+        $ilsData = $this->externalApiService->retrieveILSData($data);
+        $data['key'] = (is_array($ilsData) && isset($ilsData['@key'])) ? $ilsData['@key'] : null;
+
         try {
             // 
-            $ilsData = $this->externalApiService->retrieveILSData($data);
             // Initialize transformed data as an empty array to handle null case
             $transformedData = [];
             // If ILS data exists, transform it
