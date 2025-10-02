@@ -121,8 +121,15 @@ jobs:
             sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$CLIENT_SECRET/" .env.testing 
       
     - name: Cache Configuration and Auto-Load
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: ''
       run: | 
-        php artisan cache:clear
+        php artisan cache:clear --store=file
         php artisan config:clear
         php artisan route:clear
         php artisan view:clear
@@ -138,6 +145,13 @@ jobs:
       run: php artisan tinker --execute="DB::table('oauth_clients')->get()->toJson();"
      
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: ''
       run: |
         sudo apt-get install php8.3-xdebug
         php artisan test --coverage
