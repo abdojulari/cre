@@ -128,8 +128,9 @@ jobs:
         DB_DATABASE: testing
         DB_USERNAME: root
         DB_PASSWORD: ''
+        CACHE_STORE: file
       run: | 
-        php artisan cache:clear --store=file
+        php artisan cache:clear
         php artisan config:clear
         php artisan route:clear
         php artisan view:clear
