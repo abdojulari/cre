@@ -1,0 +1,7 @@
+
+   INFO  Personal access client created successfully.  
+
+Here is your new client secret. This is the only time it will be shown so don't lose it!
+
+  Client ID ................................................ a0038a87-6b07-46bc-bc14-19329689371e  
+  Client secret ........................................ QWRx4eA0NZGta1hxWOui3iQmUt2rIdfp3ib5rZY8  

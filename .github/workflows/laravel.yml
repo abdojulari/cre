@@ -90,6 +90,13 @@ jobs:
         ls -l storage/oauth*
         
     - name: Debug Passport Client
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: ''
       run: |
           php artisan passport:client --personal --name="Testing Personal Access Client" --no-interaction > passport_client_output.txt
           cat passport_client_output.txt
@@ -121,6 +128,13 @@ jobs:
         php artisan view:clear
     
     - name: Debug OAuth Clients
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: ''
       run: php artisan tinker --execute="DB::table('oauth_clients')->get()->toJson();"
      
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
