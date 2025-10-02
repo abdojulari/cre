@@ -114,7 +114,7 @@ class PatronDataTransformer
                     '@resource' => '/policy/patronAddress1',
                     '@key' => 'CITY/STATE'
                 ],
-                'data' => ($data['city'] ?? '') . ',' . ($data['province'] ?? ''),
+                'data' => ($data['city'] ?? '') . ',' . ' '. ($data['province'] ?? ''),
             ],
             [
                 '@resource' => '/user/patron/address1',
