@@ -117,6 +117,7 @@ class DuplicateCheckerController extends Controller
             ]);
             return response()->json([
                 'message' => 'Duplicate record found with fuzzy logic.',
+                'duplicate' => $duplicate,
             ], 409);
 
         }
