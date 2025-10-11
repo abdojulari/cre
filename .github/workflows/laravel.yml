@@ -16,12 +16,20 @@ jobs:
     env:
       APP_ENV: testing
       CACHE_DRIVER: array
+      APP_KEY: base64:K1YbJtqfXy5YfQpHj4oVt3KkX9rC2m1n0aZyX8vQ1sE=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: :memory:
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      MAIL_MAILER: log
+      LOG_CHANNEL: stack
+      LOG_LEVEL: warning
 
     steps:
     - uses: shivammathur/setup-php@v2
       with:
         php-version: '8.3'
-        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, mysql, zip, redis
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite, zip
         coverage: none
         
     - uses: actions/checkout@v4
@@ -33,8 +41,7 @@ jobs:
     - name: Install Dependencies
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
       
-    - name: Generate key for testing env
-      run: php artisan key:generate --env=testing
+    # No key generation needed; APP_KEY provided via env
       
     - name: Directory Permissions
       run: chmod -R 777 storage bootstrap/cache
