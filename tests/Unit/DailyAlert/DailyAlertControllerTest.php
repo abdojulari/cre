@@ -14,13 +14,14 @@ beforeEach(function () {
     
     // Instantiate the controller with the mocked Redis service
     $this->controller = new DailyAlertController($this->redisService);
+    $this->withoutMiddleware();
 });
 
 it('can detect no duplicates and return a message', function () {
     // Mock Redis data with no duplicates
-    $data = json_encode([
+    $data = [
         ['firstname' => 'John', 'lastname' => 'Doe', 'dateofbirth' => '1990-01-01', 'phone' => '1234567890', 'email' => 'john.doe@example.com']
-    ]);
+    ];
 
     // Mock Redis service to return this data
     $this->redisService->shouldReceive('get')
@@ -40,9 +41,9 @@ it('can detect no duplicates and return a message', function () {
 
 it('can lookup a barcode and return results', function () {
     // Mock Redis data
-    $data = json_encode([
+    $data = [
         ['barcode' => '12345', 'firstname' => 'John', 'lastname' => 'Doe', 'dateofbirth' => '1990-01-01', 'phone' => '1234567890', 'email' => 'john.doe@example.com']
-    ]);
+    ];
 
     // Mock Redis service to return this data
     $this->redisService->shouldReceive('get')
@@ -62,9 +63,9 @@ it('can lookup a barcode and return results', function () {
 
 it('can list barcodes and return formatted data', function () {
     // Mock Redis data
-    $data = json_encode([
+    $data = [
         ['barcode' => '12345', 'firstname' => 'John', 'lastname' => 'Doe', 'dateofbirth' => '1990-01-01', 'phone' => '1234567890', 'email' => 'john.doe@example.com']
-    ]);
+    ];
 
     // Mock Redis service to return this data
     $this->redisService->shouldReceive('get')
