@@ -439,6 +439,13 @@ class DuplicateCheckerController extends Controller
             'lastname' => 'required|string',
             'middlename' => 'nullable|string',
             'dateofbirth' => 'required|date',
+            'email' => 'nullable|email',
+            'phone' => 'nullable|string',
+            'address' => 'nullable|string',
+            'postalcode' => 'nullable|string',
+            'province' => 'nullable|string',
+            'city' => 'nullable|string',
+            'country' => 'nullable|string',
         ]);
 
         // Get and decode Redis data
@@ -465,11 +472,17 @@ class DuplicateCheckerController extends Controller
                 if (
                     strtolower($record['firstname']) === strtolower($data['firstname']) &&
                     strtolower($record['lastname']) === strtolower($data['lastname']) &&
+                    strtolower($record['address']) === strtolower($data['address']) &&
+                    strtolower($record['postalcode']) === strtolower($data['postalcode']) &&
+                    strtolower($record['province']) === strtolower($data['province']) &&
+                    strtolower($record['city']) === strtolower($data['city']) &&
+                    strtolower($record['country']) === strtolower($data['country']) &&
                     $recordDateOfBirth === $formattedDateOfBirth &&
                     (
-                        // If middlename is provided, check it too
-                        empty($data['middlename']) ||
-                        (isset($record['middlename']) && strtolower($record['middlename']) === strtolower($data['middlename']))
+                        (empty($data['middlename']) || (isset($record['middlename']) && strcasecmp($record['middlename'], $data['middlename']) === 0)) &&
+                        (empty($data['email']) || (isset($record['email']) && strcasecmp($record['email'], $data['email']) === 0)) &&
+                        (empty($data['phone']) || (isset($record['phone']) && strcasecmp($record['phone'], $data['phone']) === 0))
+                        // optionally add another grouped check here, or remove the comment
                     )
                 ) {
                     Log::info('Duplicate record found:', ['record' => $record]);
