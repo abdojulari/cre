@@ -14,6 +14,8 @@ beforeEach(function () {
     
     // Instantiate the controller with the mocked Redis service
     $this->controller = new DailyAlertController($this->redisService);
+    // Bind mock into the container so route-resolved controller uses it
+    app()->instance(RedisService::class, $this->redisService);
     $this->withoutMiddleware();
 });
 
