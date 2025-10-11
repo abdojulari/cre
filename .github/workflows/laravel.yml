@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
+      CACHE_DRIVER: array
 
     steps:
     - uses: shivammathur/setup-php@v2
@@ -44,10 +45,9 @@ jobs:
         echo '[]' > storage/app/duplicates.json
         chmod 666 storage/app/duplicates.json
       
-    - name: Clear caches
+    # Skipping cache/config clear to avoid DB-backed cache errors in CI
+    - name: Clear routes and views
       run: |
-        php artisan cache:clear
-        php artisan config:clear
         php artisan route:clear
         php artisan view:clear
 
