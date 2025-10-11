@@ -18,7 +18,7 @@ jobs:
       CACHE_DRIVER: array
       APP_KEY: base64:K1YbJtqfXy5YfQpHj4oVt3KkX9rC2m1n0aZyX8vQ1sE=
       DB_CONNECTION: sqlite
-      DB_DATABASE: :memory:
+      DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: array
       MAIL_MAILER: log
@@ -29,7 +29,7 @@ jobs:
     - uses: shivammathur/setup-php@v2
       with:
         php-version: '8.3'
-        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite, zip
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, zip
         coverage: none
         
     - uses: actions/checkout@v4
@@ -51,13 +51,14 @@ jobs:
         mkdir -p storage/app
         echo '[]' > storage/app/duplicates.json
         chmod 666 storage/app/duplicates.json
-      
-    # Skipping cache/config clear to avoid DB-backed cache errors in CI
-    - name: Clear routes and views
+
+    - name: Prepare sqlite database file
       run: |
-        php artisan route:clear
-        php artisan view:clear
+        mkdir -p database
+        touch database/database.sqlite
+      
+    # Skipping artisan cache clears to avoid DB-backed cache errors in CI
 
     - name: Run tests
       run: |
-        ./vendor/bin/pest -q
+        ./vendor/bin/pest
