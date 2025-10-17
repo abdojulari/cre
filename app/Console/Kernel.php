@@ -9,6 +9,7 @@ class Kernel extends ConsoleKernel
 {
     protected $commands = [
         \App\Console\Commands\ProcessDataCommand::class,
+        \App\Console\Commands\RunIlsFlow::class,
     ];
 
     // Rest of the class code...

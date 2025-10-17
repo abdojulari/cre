@@ -18,6 +18,21 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         $this->hideSensitiveRequestDetails();
 
+        // Tag HTTP client requests and our custom command so they show under Monitored
+        Telescope::tag(function (IncomingEntry $entry) {
+            try {
+                if ($entry->type === 'client-request') {
+                    return ['ils', 'http-client'];
+                }
+                if ($entry->type === 'command' && isset($entry->content['command']) && $entry->content['command'] === 'ils:run-flow') {
+                    return ['ils', 'command'];
+                }
+            } catch (\Throwable $e) {
+                // no-op
+            }
+            return [];
+        });
+
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal) {
@@ -25,9 +40,12 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                    $entry->isReportableException() ||
                    $entry->isFailedRequest() ||
                    $entry->isFailedJob() ||
-                   $entry->isScheduledTask() ||
+                   $entry->isScheduledTask() || 
+                   $entry->isSlowQuery() ||
                    $entry->hasMonitoredTag();
         });
+
+       
     }
 
     /**

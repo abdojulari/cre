@@ -127,7 +127,7 @@ class DuplicateCheckerController extends Controller
         $responseData = json_decode($barcodeService->getContent(), true);  // Decodes as an associative array
         $barcode = $responseData['barcode'];
         
-        $data['barcode'] = $data['source'] === 'OLR' ? $barcode : $data['barcode'];
+        $data['barcode'] = $data['source'] === 'OLR' || $data['source']=== 'CIC' ? $barcode : $data['barcode'];
 
         $response = $this->submitToILS($data, $duplicate, $path);
         Log::info('Response me:', ['response' => $response]);

@@ -41,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
             }
             return Limit::perHour($rateLimit)->by($ip);
         });
+
     }
 
     /**
