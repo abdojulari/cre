@@ -212,6 +212,21 @@ class DuplicateCheckerController extends Controller
     
                 // Check if the ILS data exists (not null)
                 if ($ilsData !== null) {
+
+                    // check if dateofbirth from data matches any dateofbirth in the existing records, if no match return to the user dateofbirth must be immutable
+                    foreach ($dataFromILS as $record) {
+                        if ($record['dateofbirth'] !== $data['dateofbirth']) {
+                            Log::error('Date of birth mismatch:', ['record' => $record, 'data' => $data]);
+                            Log::channel('slack')->error('Date of birth mismatch:', ['record' => $record, 'data' => $data]);
+                            return response()->json([
+                                'message' => "You can't change your date of birth. Your current date of birth is {$record['dateofbirth']}! If there is a problem, contact your institution."
+                            ], 400);
+                        }
+                        // If they match, continue
+                        break;
+                    }
+                 
+
                     // Loop through the existing records and check for matching barcode and dateofbirth
                     foreach ($dataFromILS as $record) {
                         if ($record['barcode'] === $data['barcode'] && $record['dateofbirth'] === $data['dateofbirth']) {
