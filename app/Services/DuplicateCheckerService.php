@@ -35,6 +35,9 @@ class DuplicateCheckerService
     
     //TODO: get rid of this function when everything is working
     public function isDuplicate($record1, $record2) {
+
+        // data source from the record2
+        $dataSource = $record2['source'];
         // Age calculation
         $dob1 = new \DateTime($record1['dateofbirth']);
         $dob2 = new \DateTime($record2['dateofbirth']);
@@ -52,6 +55,7 @@ class DuplicateCheckerService
     
         // If they share the same lastname
         if (strtolower($record1['lastname']) === strtolower($record2['lastname'])) {
+            $includeContactEither = false; // treat phone/email as an either-group when true
             // Case 1: Both are minors with same lastname
             if ($isMinor1 && $isMinor2) {
                 // Only compare firstname and DOB
@@ -67,14 +71,29 @@ class DuplicateCheckerService
             }
             // Case 3: Both are adults with same lastname
             else {
-                $fieldWeights = [
-                    'firstname' => 1.0,
-                    'lastname' => 1.0,
-                    'phone' => 3.0,
-                    'email' => 3.0,
-                    'dateofbirth' => 1.0,
-                    'address' => 3.0
-                ];
+                // if the data source is CRP, return false
+                Log::info('Data source:', ['dataSource' => $dataSource]);
+                if ($dataSource === 'CRP') {
+                    // phone/email are handled as an either-group worth 3.0 total
+                    $fieldWeights = [
+                        'firstname' => 1.0,
+                        'lastname' => 1.0,
+                        'dateofbirth' => 1.0,
+                        'address' => 3.0
+                    ];
+                    $includeContactEither = true;
+                } else {
+                    // Default adult-same-lastname case: phone and email counted separately
+                    $fieldWeights = [
+                        'firstname' => 1.0,
+                        'lastname' => 1.0,
+                        'phone' => 3.0,
+                        'email' => 3.0,
+                        'dateofbirth' => 1.0,
+                        'address' => 3.0
+                    ];
+                    $includeContactEither = false;
+                }
             }
         }
         // Different lastnames
@@ -115,6 +134,31 @@ class DuplicateCheckerService
     
         $totalSimilarityScore = 0;
         $totalWeight = 0;
+
+        // Handle phone/email as an either-group with combined weight 3.0 when enabled
+        if (isset($includeContactEither) && $includeContactEither === true) {
+            $hasPhone = isset($record1['phone'], $record2['phone']) && $record1['phone'] !== '' && $record2['phone'] !== '';
+            $hasEmail = isset($record1['email'], $record2['email']) && $record1['email'] !== '' && $record2['email'] !== '';
+
+            // Require at least one of phone or email to be present
+            if (!$hasPhone && !$hasEmail) {
+                return false;
+            }
+
+            $contactWeight = 3.0;
+            $maxContactSimWeighted = 0;
+
+            if ($hasPhone) {
+                $maxContactSimWeighted = max($maxContactSimWeighted, $this->similarity($record1['phone'], $record2['phone'], $contactWeight));
+            }
+            if ($hasEmail) {
+                $maxContactSimWeighted = max($maxContactSimWeighted, $this->similarity($record1['email'], $record2['email'], $contactWeight));
+            }
+
+            // Apply only the best of phone/email once and count weight once
+            $totalSimilarityScore += $maxContactSimWeighted;
+            $totalWeight += $contactWeight;
+        }
     
         foreach ($fieldWeights as $field => $weight) {
             if (!isset($record1[$field]) || !isset($record2[$field])) {
