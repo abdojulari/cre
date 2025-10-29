@@ -115,9 +115,13 @@ class DuplicateCheckerService
             }
             // For different lastnames, require unique contact details
             else {
+                // Only treat email/phone as matching when both sides are present and non-empty
+                $emailsPresent = isset($record1['email'], $record2['email']) && $record1['email'] !== '' && $record2['email'] !== '';
+                $phonesPresent = isset($record1['phone'], $record2['phone']) && $record1['phone'] !== '' && $record2['phone'] !== '';
+
                 if (
-                    strtolower($record1['email']) === strtolower($record2['email']) ||
-                    strtolower($record1['phone']) === strtolower($record2['phone'])
+                    ($emailsPresent && strcasecmp($record1['email'], $record2['email']) === 0) ||
+                    ($phonesPresent && $this->normalizePhone($record1['phone']) === $this->normalizePhone($record2['phone']))
                 ) {
                     return true; // Consider it a duplicate if contact details match
                 }
@@ -164,7 +168,13 @@ class DuplicateCheckerService
             if (!isset($record1[$field]) || !isset($record2[$field])) {
                 continue;
             }
-            $similarity = $this->similarity($record1[$field], $record2[$field], $weight);
+            // Skip empty values to avoid inflating similarity (e.g., "" vs "" should not count)
+            $value1 = is_string($record1[$field]) ? trim($record1[$field]) : $record1[$field];
+            $value2 = is_string($record2[$field]) ? trim($record2[$field]) : $record2[$field];
+            if ($value1 === '' || $value2 === '') {
+                continue;
+            }
+            $similarity = $this->similarity($value1, $value2, $weight);
             $totalSimilarityScore += $similarity;
             $totalWeight += $weight;
         }
@@ -172,6 +182,11 @@ class DuplicateCheckerService
         $averageSimilarity = $totalWeight > 0 ? $totalSimilarityScore / $totalWeight : 0;
         
         return $averageSimilarity > 75;
+    }
+
+    private function normalizePhone($phone) {
+        // Keep digits only for reliable comparison
+        return preg_replace('/\D+/', '', (string)$phone);
     }
 
     public function similarity($str1, $str2, $weight = 1) {
