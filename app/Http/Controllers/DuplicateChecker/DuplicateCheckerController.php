@@ -130,6 +130,7 @@ class DuplicateCheckerController extends Controller
         $data['barcode'] = $data['source'] === 'OLR' || $data['source']=== 'CIC' ? $barcode : $data['barcode'];
 
         $response = $this->submitToILS($data, $duplicate, $path);
+
         Log::info('Response me:', ['response' => $response]);
         if ($response->getStatusCode() === 201) {
             return response()->json(
@@ -320,9 +321,12 @@ class DuplicateCheckerController extends Controller
             $expiryDate = $currentDate->format('Y-m-d');
         } elseif ($data['source'] === 'LPASS' && isset($data['expirydate'])) {
             $expiryDate = date('Y-m-d', strtotime($data['expirydate']));
+        } else {
+            $expiryDate = null;
         }
         
         try {
+            
             Mail::to($data['email'])->send(new SendWelcomeEmail(
                 $data['firstname'],
                 $data['lastname'],
@@ -633,7 +637,9 @@ class DuplicateCheckerController extends Controller
             $this->redisService->set('cre_registration_record', $existingDuplicates);
 
             // Send welcome email
+
             $this->sendWelcomeEmail($data);
+
             Log::channel('slack')->info('Record added successfully.', [
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent()
