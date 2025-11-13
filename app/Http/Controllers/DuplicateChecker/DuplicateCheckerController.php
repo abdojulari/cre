@@ -74,6 +74,8 @@ class DuplicateCheckerController extends Controller
             'usePreferredname' => 'nullable|boolean',
             'preferredname' => 'nullable|string',
             'source' => 'nullable|string',
+            'homeBranch' => 'nullable|string',
+            'homeBranchLink' => 'nullable|string',
         ]);    
     
         $currentDate = new \DateTime();

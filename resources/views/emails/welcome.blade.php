@@ -58,7 +58,13 @@
 </head>
 <body>
     <img src="{{ $message->embed(public_path('images/logo-on-email.png')) }}" alt="Edmonton Public Library Logo" class="logo">
-    
+    @if($source === 'CIC')
+    <p>The email below is intended for the child in care listed.
+       Please provide this information directly to the child in 
+       question, their caseworker, or any adult who works in direct 
+       proximity with the child.
+    </p>
+    @endif
     <h1>Hello {{ $firstname }},</h1>
     
     <p>We're happy you joined the EPL family!</p>
@@ -70,6 +76,9 @@
             <strong>Card Number:</strong> {{ $barcode }} <br>
             @if($source !== 'CRP')
             <strong>Expiry Date:</strong> {{ $expiryDate }}
+            @endif
+            @if($source === 'CIC')
+            <strong>PIN:</strong> <p style="font-size: 0.8em;">Your PIN was set to the year of your birth.</p>
             @endif
         </p>
     </div>
@@ -100,6 +109,15 @@
         <li>Download our <a href="https://www.epl.ca/epl-app/" target="_blank">EPL App </a> for even more convenient access to our services and resources. </li>
 
         <li>Watch our <a href="https://www.youtube.com/playlist?list=PL2IiDBdO-aW57a1Hsrk8xb4xRgVXFtc6D" target="_blank">online tutorials</a> to learn more about getting started. </li> 
+        @if($source === 'CIC')
+        <li>Reach out to your local Community Librarian for any questions or concerns!
+            <ul>
+                <li>
+                    {{ $homeBranch}} : <a href="{{ $homeBranchLink}}" target="_blank">Branch Contact Details</a>
+                </li>
+            </ul>
+        </li>
+        @endif
     </ul>
     @endif
 
