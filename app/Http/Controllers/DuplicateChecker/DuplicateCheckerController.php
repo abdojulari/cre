@@ -74,7 +74,7 @@ class DuplicateCheckerController extends Controller
             'usePreferredname' => 'nullable|boolean',
             'preferredname' => 'nullable|string',
             'source' => 'nullable|string',
-            'homeBranch' => 'nullable|string',
+            'homeBranchName' => 'nullable|string',
             'homeBranchLink' => 'nullable|string',
         ]);    
     
@@ -334,8 +334,11 @@ class DuplicateCheckerController extends Controller
                 $data['lastname'],
                 $data['barcode'],
                 $data['source'],
-                $expiryDate
+                $expiryDate,
+                $data['homeBranchName'],
+                $data['homeBranchLink']
             ));
+
         } catch (\Exception $e) {
             Log::error('Error sending welcome email: ' . $e->getMessage());
             Log::channel('slack')->error('Error sending welcome email', [

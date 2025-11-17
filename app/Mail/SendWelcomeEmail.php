@@ -18,16 +18,20 @@ class SendWelcomeEmail extends Mailable
     public $barcode;
     public $expiryDate;
     public $source;
+    public $homeBranchName;
+    public $homeBranchLink;
     /**
      * Create a new message instance.
      */
-    public function __construct($firstname, $lastname, $barcode, $source, $expiryDate)
+    public function __construct($firstname, $lastname, $barcode, $source, $expiryDate, $homeBranchName, $homeBranchLink)
     {
         $this->firstname = $firstname;
         $this->lastname = $lastname;
         $this->barcode = $barcode;
         $this->source = $source;
         $this->expiryDate = $expiryDate;
+        $this->homeBranchName = $homeBranchName;
+        $this->homeBranchLink = $homeBranchLink;
     }
 
     /**
@@ -35,8 +39,15 @@ class SendWelcomeEmail extends Mailable
      */
     public function envelope(): Envelope
     {
+        // if $source is CIC, use 'Discover EPL with Your New Library Card' as the subject
+        // otherwise use 'Your New Library Card' as the subject
+        if ($this->source === 'CIC') {
+            $subject = 'Discover EPL with Your New Library Card';
+        } else {
+            $subject = 'Your New Library Card';
+        }
         return new Envelope(
-            subject: 'Your New Library Card',
+            subject: $subject,
             from: 'noreply@epl.ca',
         );
     }

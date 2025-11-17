@@ -74,11 +74,11 @@
         <p>
             <strong>Name:</strong> {{ $firstname }} {{ $lastname }}<br>
             <strong>Card Number:</strong> {{ $barcode }} <br>
-            @if($source !== 'CRP')
-            <strong>Expiry Date:</strong> {{ $expiryDate }}
+            @if($source !== 'CRP' || $source !== 'CIC')
+            <strong>Expiry Date:</strong> {{ $expiryDate }} <br>
             @endif
             @if($source === 'CIC')
-            <strong>PIN:</strong> <p style="font-size: 0.8em;">Your PIN was set to the year of your birth.</p>
+            <strong>PIN:</strong> <span style="font-size: 0.95em;">Your PIN was set to the year of your birth.</span>
             @endif
         </p>
     </div>
@@ -86,7 +86,7 @@
     @if($source === 'OLR')
         <p>This library card gives you <b>immediate access</b> to all our <a href="https://www.epl.ca/resources/" target="_blank">online resources</a> 
         for the <b>next 45 days</b>. You can access these resources by logging into your account with your library card number and PIN.</p>
-    @elseif(!in_array($source, ['CRP', 'OLR']))
+    @elseif(!in_array($source, ['CRP', 'OLR', 'CIC']))
     <p>
         This library card gives you <b>immediate access</b> to all our 
         <a href="https://www.epl.ca/resources/" target="_blank">online resources</a>. 
@@ -113,7 +113,7 @@
         <li>Reach out to your local Community Librarian for any questions or concerns!
             <ul>
                 <li>
-                    {{ $homeBranch}} : <a href="{{ $homeBranchLink}}" target="_blank">Branch Contact Details</a>
+                    {{ $homeBranchName}} : <a href="{{ $homeBranchLink}}" target="_blank">Branch Contact Details</a>
                 </li>
             </ul>
         </li>
