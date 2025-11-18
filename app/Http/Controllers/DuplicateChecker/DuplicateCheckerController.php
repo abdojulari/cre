@@ -329,16 +329,20 @@ class DuplicateCheckerController extends Controller
         
         try {
             
+            $homeBranchName = ($data['source'] === 'CIC') ? ($data['homeBranchName'] ?? null) : null;
+            $homeBranchLink = ($data['source'] === 'CIC') ? ($data['homeBranchLink'] ?? null) : null;
+            
             Mail::to($data['email'])->send(new SendWelcomeEmail(
                 $data['firstname'],
                 $data['lastname'],
                 $data['barcode'],
                 $data['source'],
                 $expiryDate,
-                $data['homeBranchName'],
-                $data['homeBranchLink']
+                $homeBranchName,
+                $homeBranchLink
             ));
 
+            Log::info('Welcome email sent to: ' . $data['email'], ['data' => $data]);
         } catch (\Exception $e) {
             Log::error('Error sending welcome email: ' . $e->getMessage());
             Log::channel('slack')->error('Error sending welcome email', [

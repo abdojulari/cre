@@ -23,15 +23,15 @@ class SendWelcomeEmail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct($firstname, $lastname, $barcode, $source, $expiryDate, $homeBranchName, $homeBranchLink)
+    public function __construct($firstname, $lastname, $barcode, $source, $expiryDate, $homeBranchName = null, $homeBranchLink = null)
     {
         $this->firstname = $firstname;
         $this->lastname = $lastname;
         $this->barcode = $barcode;
         $this->source = $source;
         $this->expiryDate = $expiryDate;
-        $this->homeBranchName = $homeBranchName;
-        $this->homeBranchLink = $homeBranchLink;
+        $this->homeBranchName = $source === 'CIC' ? $homeBranchName : null;
+        $this->homeBranchLink = $source === 'CIC' ? $homeBranchLink : null;
     }
 
     /**
