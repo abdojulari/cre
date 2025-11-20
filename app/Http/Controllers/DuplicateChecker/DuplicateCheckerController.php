@@ -492,12 +492,19 @@ class DuplicateCheckerController extends Controller
                 $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
                 
                 // Check for exact matches
+                // Match if: (firstname AND lastname) OR (firstname AND dateofbirth) OR (lastname AND dateofbirth)
                 if (
-                    strtolower($record['firstname']) === strtolower($data['firstname']) &&
-                    strtolower($record['lastname']) === strtolower($data['lastname']) ||
-                    $recordDateOfBirth === $formattedDateOfBirth &&
                     (
-                        (empty($data['middlename']) || (isset($record['middlename']) && strcasecmp($record['middlename'], $data['middlename']) === 0))         
+                        strtolower($record['firstname']) === strtolower($data['firstname']) &&
+                        strtolower($record['lastname']) === strtolower($data['lastname'])
+                    ) ||
+                    (
+                        strtolower($record['firstname']) === strtolower($data['firstname']) &&
+                        $recordDateOfBirth === $formattedDateOfBirth
+                    ) ||
+                    (
+                        strtolower($record['lastname']) === strtolower($data['lastname']) &&
+                        $recordDateOfBirth === $formattedDateOfBirth
                     )
                 ) {
                     Log::info('Duplicate record found:', ['record' => $record]);
