@@ -486,26 +486,38 @@ class DuplicateCheckerController extends Controller
         $formattedDateOfBirth = date('Y-m-d', strtotime($data['dateofbirth']));
 
         try {
+            $matchedRecords = []; // Collect all matches
+            
             foreach ($dataInRedis as $record) {
                 $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
                 
                 // Check for exact matches
                 if (
                     strtolower($record['firstname']) === strtolower($data['firstname']) &&
-                    strtolower($record['lastname']) === strtolower($data['lastname']) &&
+                    strtolower($record['lastname']) === strtolower($data['lastname']) ||
                     $recordDateOfBirth === $formattedDateOfBirth &&
                     (
                         (empty($data['middlename']) || (isset($record['middlename']) && strcasecmp($record['middlename'], $data['middlename']) === 0))         
                     )
                 ) {
                     Log::info('Duplicate record found:', ['record' => $record]);
-                    return response()->json([
-                        'message' => 'Record already exists.',
-                        'match' => true,
-                        'matched_record' => $record
-                    ], 200);
+                    $matchedRecords[] = $record; // Add to array instead of returning immediately
                 }
             }
+            
+            // Return all matched records
+            if (!empty($matchedRecords)) {
+                Log::info('Total duplicate records found: ' . count($matchedRecords));
+                return response()->json([
+                    'message' => count($matchedRecords) > 1 
+                        ? 'Multiple records already exist.' 
+                        : 'Record already exists.',
+                    'match' => true,
+                    'matched_records' => $matchedRecords,
+                    'count' => count($matchedRecords)
+                ], 200);
+            }
+            
             Log::info('No duplicate record found.');
             return response()->json([
                 'message' => 'No duplicate record found.',

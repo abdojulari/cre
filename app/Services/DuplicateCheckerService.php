@@ -47,6 +47,11 @@ class DuplicateCheckerService
         $isMinor1 = $age1 < 18;
         $isMinor2 = $age2 < 18;
     
+        // Exempt CIC minors from duplicate checking
+        if ($dataSource === 'CIC' && $isMinor2) {
+            return false;
+        }
+    
         // Normalize addresses before any comparison
         if (isset($record1['address']) && isset($record2['address'])) {
             $record1['address'] = $this->normalizeAddress($record1['address']);
