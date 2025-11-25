@@ -49,7 +49,13 @@ class DuplicateCheckerService
     
         // Exempt CIC minors from duplicate checking
         if ($dataSource === 'CIC' && $isMinor2) {
-            return false;
+            // Allow registration of multiple accounts with exception:
+            // Same child can't be registered under the same careof
+            if (isset($record1['careof']) && isset($record2['careof']) && 
+                strtolower($record1['careof']) === strtolower($record2['careof'])) {
+                return true; // Is a duplicate - same careof, block registration
+            }
+            return false; // Not a duplicate - different or missing careof, allow registration
         }
     
         // Normalize addresses before any comparison
