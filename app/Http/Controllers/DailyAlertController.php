@@ -64,8 +64,9 @@ class DailyAlertController extends Controller
         $barcode = $request->input('barcode');
         $data = $this->redisService->get('cre_registration_record');
 
-        if (!is_array($data) || $data === null) {
-            return response()->json(['error' => 'No data found in Redis'], 404);
+        //  Check if $data is already an array, otherwise decode it if it's a string
+        if (is_string($data)) {
+            $data = json_decode($data, true) ?? [];
         }
 
         $result = array_filter($data, function ($entry) use ($barcode) {
