@@ -14,11 +14,11 @@ beforeEach(function () {
 // Test for 'retrieveDuplicateUsingCache' method
 it('can retrieve a duplicate from the cache', function () {
     $redis = collect([
-        ['dateofbirth' => '2005-01-01', 'lastname' => 'Doe', 'firstname' => 'John', 'address' => '123 Main St'],
-        ['dateofbirth' => '2005-01-01', 'lastname' => 'Doe', 'firstname' => 'John', 'address' => '123 Main St'],
+        ['dateofbirth' => '2005-01-01', 'lastname' => 'Doe', 'firstname' => 'John', 'address' => '123 Main St', 'source' => 'test'],
+        ['dateofbirth' => '2005-01-01', 'lastname' => 'Doe', 'firstname' => 'John', 'address' => '123 Main St', 'source' => 'test'],
     ]);
     
-    $data = ['dateofbirth' => '2005-01-01', 'lastname' => 'Doe', 'firstname' => 'John', 'address' => '123 Main St'];
+    $data = ['dateofbirth' => '2005-01-01', 'lastname' => 'Doe', 'firstname' => 'John', 'address' => '123 Main St', 'source' => 'test'];
 
     $duplicate = $this->service->retrieveDuplicateUsingCache($data, $redis);
 
@@ -42,6 +42,7 @@ it('detects duplicates based on certain fields', function () {
         'email' => 'john@example.com',
         'dateofbirth' => '2000-01-01',
         'address' => '123 Main St',
+        'source' => 'test',
     ];
 
     $record2 = [
@@ -51,6 +52,7 @@ it('detects duplicates based on certain fields', function () {
         'email' => 'john@example.com',
         'dateofbirth' => '2000-01-01',
         'address' => '123 Main St',
+        'source' => 'test',
     ];
 
     $isDuplicate = $this->service->isDuplicate($record1, $record2);
@@ -66,6 +68,7 @@ it('returns false for non-duplicates', function () {
         'email' => 'jane@example.com',
         'dateofbirth' => '1995-01-01',
         'address' => '123 Main St',
+        'source' => 'test',
     ];
 
     $record2 = [
@@ -75,6 +78,7 @@ it('returns false for non-duplicates', function () {
         'email' => 'john@example.com',
         'dateofbirth' => '1990-01-01',
         'address' => '456 Oak St',
+        'source' => 'test',
     ];
 
     $isDuplicate = $this->service->isDuplicate($record1, $record2);

@@ -54,10 +54,6 @@ it('checks if the DuplicateCheckerController has a method called store', functio
     $this->assertTrue(method_exists(DuplicateCheckerController::class, 'store'));
 });
 
-it('skips bearer token fetching in unit tests', function () {
-    test()->markTestSkipped('Unit tests avoid Passport/DB token endpoint.');
-});
-
 it('checks if the endpoint /duplicates exists', function () {
     // Using route to exercise validation layer; middleware is disabled
     $response = $this->postJson('/api/duplicates',[]);
