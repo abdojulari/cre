@@ -462,85 +462,242 @@ class DuplicateCheckerController extends Controller
     // quick duplicate check without using fuzzy logic
     public function quickDuplicateCheck(Request $request)
     {
+        // 1. Validate input
         $data = $request->validate([
-            'firstname' => 'required|string',
-            'lastname' => 'required|string',
-            'middlename' => 'nullable|string',
-            'dateofbirth' => 'required|date'       
+            'firstname'    => 'required|string',
+            'lastname'     => 'required|string',
+            'middlename'   => 'nullable|string',
+            'dateofbirth'  => 'required|date'
         ]);
 
-        // Get and decode Redis data
-        $dataInRedis = $this->redisService->get('cre_registration_record');
-       
-        // If Redis data is a string, decode it
-        if (is_string($dataInRedis)) {
-            $dataInRedis = json_decode($dataInRedis, true) ?? [];
-        }
-        
-        // Ensure dataInRedis is an array
-        if (!is_array($dataInRedis)) {
-            $dataInRedis = [];
-        }
+        // Normalize input once
+        $firstname = strtolower(trim($data['firstname']));
+        $lastname  = strtolower(trim($data['lastname']));
+        $dob       = date('Y-m-d', strtotime($data['dateofbirth']));
 
-        // Format the dateofbirth to match the format in Redis
-        $formattedDateOfBirth = date('Y-m-d', strtotime($data['dateofbirth']));
+        // 2. Retrieve records from Redis
+        $records = $this->redisService->get('cre_registration_record');
 
-        try {
-            $matchedRecords = []; // Collect all matches
-            
-            foreach ($dataInRedis as $record) {
-                $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
-                
-                // Check for exact matches
-                // Match if: (firstname AND lastname) OR (firstname AND dateofbirth) OR (lastname AND dateofbirth)
-                if (
-                    (
-                        strtolower($record['firstname']) === strtolower($data['firstname']) &&
-                        strtolower($record['lastname']) === strtolower($data['lastname'])
-                    ) ||
-                    (
-                        strtolower($record['firstname']) === strtolower($data['firstname']) &&
-                        $recordDateOfBirth === $formattedDateOfBirth
-                    ) ||
-                    (
-                        strtolower($record['lastname']) === strtolower($data['lastname']) &&
-                        $recordDateOfBirth === $formattedDateOfBirth
-                    )
-                ) {
-                    Log::info('Duplicate record found:', ['record' => $record]);
-                    $matchedRecords[] = $record; // Add to array instead of returning immediately
-                }
-            }
-            
-            // Return all matched records
-            if (!empty($matchedRecords)) {
-                Log::info('Total duplicate records found: ' . count($matchedRecords));
-                return response()->json([
-                    'message' => count($matchedRecords) > 1 
-                        ? 'Multiple records already exist.' 
-                        : 'Record already exists.',
-                    'match' => true,
-                    'matched_records' => $matchedRecords,
-                    'count' => count($matchedRecords)
-                ], 200);
-            }
-            
-            Log::info('No duplicate record found.');
-            return response()->json([
-                'message' => 'No duplicate record found.',
-                'match' => false
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error checking for duplicates:', ['error' => $e->getMessage()]);
-            Log::channel('slack')->error('Error checking for duplicates', [
-                'error' => $e->getMessage(),
-                'ip' => request()->ip(),
-                'user_agent' => request()->userAgent()
+        Log::info('Raw Redis data state', [
+            'is_null' => is_null($records),
+            'type'    => gettype($records),
+        ]);
+
+        // 3. Handle null / connection error / missing key
+        if ($records === null) {
+            Log::warning('Redis key missing or connection issue', [
+                'key' => 'cre_registration_record'
             ]);
-            return response()->json(['message' => 'Error checking for duplicates'], 500);
+
+            return response()->json([
+                'message' => 'Unable to retrieve data from cache.',
+                'match'   => false,
+                'error'   => 'redis_data_unavailable'
+            ], 503);
         }
 
+        // 4. If Redis returns JSON string → decode safely
+        if (is_string($records)) {
+
+            Log::info('Redis returned raw JSON string. Decoding...', [
+                'length' => strlen($records)
+            ]);
+
+            $decoded = json_decode($records, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Invalid JSON retrieved from Redis', [
+                    'error' => json_last_error_msg(),
+                    'preview' => substr($records, 0, 150),
+                ]);
+
+                return response()->json([
+                    'message' => 'Invalid cache format.',
+                    'match'   => false
+                ], 503);
+            }
+
+            $records = $decoded;
+        }
+
+        // 5. Still invalid? Hard fail.
+        if (!is_array($records)) {
+            Log::error('Redis data is not array or valid JSON', [
+                'type' => gettype($records)
+            ]);
+
+            return response()->json([
+                'message' => 'Cache returned invalid data type.',
+                'match'   => false
+            ], 503);
+        }
+
+        Log::info('Decoded Redis records', ['count' => count($records)]);
+
+        // 6. Duplicate scanning (optimized)
+        $matched = [];
+
+        foreach ($records as $record) {
+
+            // Normalize record fields once
+            $recFirst = strtolower($record['firstname'] ?? '');
+            $recLast  = strtolower($record['lastname'] ?? '');
+            $recDob   = isset($record['dateofbirth'])
+                ? date('Y-m-d', strtotime($record['dateofbirth']))
+                : null;
+
+            // Skip bad records
+            if (!$recFirst || !$recLast || !$recDob) {
+                continue;
+            }
+
+            // Matching logic
+            $fullMatch  = ($recFirst === $firstname && $recLast === $lastname);
+            $firstDob   = ($recFirst === $firstname && $recDob === $dob);
+            $lastDob    = ($recLast === $lastname  && $recDob === $dob);
+
+            if ($fullMatch || $firstDob || $lastDob) {
+                $matched[] = $record;
+            }
+        }
+
+        // 7. Return results
+        if (!empty($matched)) {
+            return response()->json([
+                'message' => count($matched) > 1
+                    ? 'Multiple records already exist.'
+                    : 'Record already exists.',
+                'match'            => true,
+                'count'            => count($matched),
+                'matched_records'  => $matched
+            ], 200);
+        }
+
+        return response()->json([
+            'message' => 'No duplicate record found.',
+            'match'   => false
+        ], 200);
     }
+
+    // public function quickDuplicateCheck(Request $request)
+    // {
+    //     $data = $request->validate([
+    //         'firstname' => 'required|string',
+    //         'lastname' => 'required|string',
+    //         'middlename' => 'nullable|string',
+    //         'dateofbirth' => 'required|date'       
+    //     ]);
+
+    //     // Get and decode Redis data
+    //     $dataInRedis = $this->redisService->get('cre_registration_record');
+       
+    //     // Log the type and state of Redis data for debugging
+    //     Log::info('Redis data retrieved', [
+    //         'is_null' => is_null($dataInRedis),
+    //         'is_array' => is_array($dataInRedis),
+    //         'is_string' => is_string($dataInRedis),
+    //         'count' => is_array($dataInRedis) ? count($dataInRedis) : 0,
+    //         'type' => gettype($dataInRedis)
+    //     ]);
+
+    //     // Check if Redis returned null (connection issue or key doesn't exist)
+    //     if (is_null($dataInRedis)) {
+    //         Log::warning('Redis data is null - possible connection issue or empty key', [
+    //             'key' => 'cre_registration_record',
+    //             'ip' => request()->ip()
+    //         ]);
+    //         return response()->json([
+    //             'message' => 'Unable to retrieve data from cache. Please try again.',
+    //             'match' => false,
+    //             'error' => 'redis_data_unavailable'
+    //         ], 503);
+    //     }
+        
+    //     // Normalize data: decode if string, ensure array, handle empty/null cases
+    //     if (!is_array($dataInRedis)) {
+    //         if (is_string($dataInRedis)) {
+    //             Log::info('Redis data is string, decoding...', ['length' => strlen($dataInRedis)]);
+    //             $dataInRedis = json_decode($dataInRedis, true) ?? [];
+                
+    //             // Check if decode failed or returned empty
+    //             if (empty($dataInRedis)) {
+    //                 Log::warning('Decoded Redis data is empty or invalid JSON');
+    //             }
+    //         } else {
+    //             Log::error('Redis data is not an array or string', ['type' => gettype($dataInRedis)]);
+    //             $dataInRedis = [];
+    //         }
+    //     }
+
+    //     // Log the number of records to search through
+    //     Log::info('Searching for duplicates', [
+    //         'total_records_in_redis' => count($dataInRedis),
+    //         'search_params' => [
+    //             'firstname' => $data['firstname'],
+    //             'lastname' => $data['lastname'],
+    //             'dateofbirth' => $data['dateofbirth']
+    //         ]
+    //     ]);
+
+    //     // Format the dateofbirth to match the format in Redis
+    //     $formattedDateOfBirth = date('Y-m-d', strtotime($data['dateofbirth']));
+
+    //     try {
+    //         $matchedRecords = []; // Collect all matches
+            
+    //         foreach ($dataInRedis as $record) {
+    //             $recordDateOfBirth = date('Y-m-d', strtotime($record['dateofbirth']));
+                
+    //             // Check for exact matches
+    //             // Match if: (firstname AND lastname) OR (firstname AND dateofbirth) OR (lastname AND dateofbirth)
+    //             if (
+    //                 (
+    //                     strtolower($record['firstname']) === strtolower($data['firstname']) &&
+    //                     strtolower($record['lastname']) === strtolower($data['lastname'])
+    //                 ) ||
+    //                 (
+    //                     strtolower($record['firstname']) === strtolower($data['firstname']) &&
+    //                     $recordDateOfBirth === $formattedDateOfBirth
+    //                 ) ||
+    //                 (
+    //                     strtolower($record['lastname']) === strtolower($data['lastname']) &&
+    //                     $recordDateOfBirth === $formattedDateOfBirth
+    //                 )
+    //             ) {
+    //                 Log::info('Duplicate record found:', ['record' => $record]);
+    //                 $matchedRecords[] = $record; // Add to array instead of returning immediately
+    //             }
+    //         }
+            
+    //         // Return all matched records
+    //         if (!empty($matchedRecords)) {
+    //             Log::info('Total duplicate records found: ' . count($matchedRecords));
+    //             return response()->json([
+    //                 'message' => count($matchedRecords) > 1 
+    //                     ? 'Multiple records already exist.' 
+    //                     : 'Record already exists.',
+    //                 'match' => true,
+    //                 'matched_records' => $matchedRecords,
+    //                 'count' => count($matchedRecords)
+    //             ], 200);
+    //         }
+            
+    //         Log::info('No duplicate record found.');
+    //         return response()->json([
+    //             'message' => 'No duplicate record found.',
+    //             'match' => false
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error checking for duplicates:', ['error' => $e->getMessage()]);
+    //         Log::channel('slack')->error('Error checking for duplicates', [
+    //             'error' => $e->getMessage(),
+    //             'ip' => request()->ip(),
+    //             'user_agent' => request()->userAgent()
+    //         ]);
+    //         return response()->json(['message' => 'Error checking for duplicates'], 500);
+    //     }
+
+    // }
 
     // // override status check 
     public function overrideStatusCheck(Request $request)

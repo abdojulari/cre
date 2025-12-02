@@ -28,13 +28,62 @@ class RedisService
     public function get(string $key)
     {
         try {
+            // Ensure Redis connection is alive
+            $this->redis->ping();
+
             $value = $this->redis->get($key);
-            return $value ? json_decode($value, true) : null;
-        } catch (\Exception $e) {
-            Log::error("Error fetching from Redis: {$e->getMessage()}");
+
+            // Key does not exist
+            if ($value === null) {
+                Log::warning('Redis key not found', ['key' => $key]);
+                return null;
+            }
+
+            // Key exists but contains empty/blank value
+            if (trim($value) === '') {
+                Log::warning('Redis key exists but value is empty', ['key' => $key]);
+                return null;
+            }
+
+            // Decode JSON
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Failed to decode JSON from Redis', [
+                    'key' => $key,
+                    'error' => json_last_error_msg(),
+                    'value_preview' => substr($value, 0, 150),
+                ]);
+                return null;
+            }
+
+            // Success
+            Log::info('Redis value retrieved successfully', [
+                'key' => $key,
+                'type' => gettype($decoded),
+                'items' => is_array($decoded) ? count($decoded) : null,
+            ]);
+
+            return $decoded;
+
+        } catch (\Throwable $e) {
+
+            // Log locally
+            Log::error('Redis fetch error', [
+                'key' => $key,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Send alert to Slack
+            Log::channel('slack')->error('Redis connection error', [
+                'key' => $key,
+                'error' => $e->getMessage()
+            ]);
+
             return null;
         }
     }
+
 
     /**
      * Set a value in Redis by key.
